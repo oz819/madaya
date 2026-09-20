@@ -23,8 +23,6 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Superseded Express/Prisma prototype, kept locally only — not part of the shipped app.
     "_deprecated_express_backend_prototype/**",
-    // Generated native build output (Capacitor bridge, merged assets) — not hand-written source.
-    "android/**",
   ]),
 ]);
 

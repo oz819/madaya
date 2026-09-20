@@ -89,16 +89,15 @@ Authentication → Rate Limits).
 
 Supabase Dashboard → **Authentication → URL Configuration**:
 
-- **Site URL**: رابط التطبيق النهائي بعد النشر (مثال: `https://your-app.vercel.app`).
+- **Site URL**: رابط التطبيق النهائي بعد النشر (مثال: `https://your-site.netlify.app`).
   هذا ما سيُبنى عليه رابط كل رسالة، فلا يصح أن يبقى `localhost`.
 - **Redirect URLs**: أضف الأنماط التالية:
   ```
-  https://your-app.vercel.app/**
+  https://your-site.netlify.app/**
   ```
-  وللاختبار المحلي/الهاتف على الشبكة المحلية أضف أيضًا (مؤقتًا):
+  وللاختبار المحلي أضف أيضًا:
   ```
   http://localhost:3000/**
-  http://192.168.100.9:3000/**
   ```
 
 ## 3. تعديل قوالب الرسائل (خطوة إلزامية)

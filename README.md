@@ -62,16 +62,31 @@ npm run dev
 لإنشاء أي مدير/محفظ إضافي لاحقًا: من صفحة "⚙️ الإدارة" داخل التطبيق (يتطلب `SUPABASE_SERVICE_ROLE_KEY`
 مضبوطًا)، أو يدويًا عبر Supabase Dashboard ثم إضافة صف في جدول `profiles` بنفس الـ `id`.
 
-## البناء والنشر
+## البناء والنشر (Netlify)
 
 ```bash
 npm run build
-npm start
+npm start        # تشغيل محلي للنسخة الإنتاجية
 ```
 
-انشر على أي منصة تدعم Next.js (Vercel هو الأبسط، أو أي Node hosting عادي). اضبط نفس متغيرات
-`.env.local` كمتغيرات بيئة على منصة الاستضافة، بما فيها `SUPABASE_SERVICE_ROLE_KEY` كسرّ خادم
-(server secret) وليس متغيرًا عامًا.
+النشر على **Netlify** مضبوط عبر `netlify.toml` (يتعرّف Netlify على Next.js تلقائيًا، لا يلزم plugin).
+كل `git push` على فرع `main` يعمل deploy تلقائيًا بعد ربط المستودع من لوحة Netlify
+(Add new project → Import from GitHub).
+
+**متغيرات البيئة** (Netlify → Site configuration → Environment variables):
+
+| المتغير | ملاحظة |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | عام |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | عام |
+| `SUPABASE_SERVICE_ROLE_KEY` | **سرّي** — فعّل خيار *Contains secret values*؛ لا يوضع في الكود ولا في Git |
+
+**بعد أول نشر** اضبط في Supabase → Authentication → URL Configuration: **Site URL** = رابط موقع
+Netlify، وأضف `https://<موقعك>/**` إلى **Redirect URLs** (وإلا ستحوّل روابط استعادة كلمة المرور
+إلى عنوان خاطئ). التفاصيل الكاملة في `EMAIL_SETUP.md`.
+
+التطبيق **تطبيق ويب** فقط (متجاوب مع الهاتف)، وقابل للتثبيت من المتصفح كـ PWA عبر
+`app/manifest.ts` — لا يوجد تطبيق أندرويد/iOS أصلي.
 
 ## الأمان (مهم)
 
