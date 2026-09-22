@@ -14,15 +14,26 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function sendCode(e: React.FormEvent) {
+  async function sendCode(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
+
+    // Read the field straight off the form instead of trusting the `email` state: some browsers
+    // (Chrome autofill on Android especially) fill the input's DOM value without firing a React
+    // onChange, which would otherwise send an empty email to Supabase.
+    const submittedEmail = (new FormData(e.currentTarget).get("email") as string | null)?.trim() ?? "";
+    if (!submittedEmail) {
+      setError("الرجاء إدخال البريد الإلكتروني.");
+      return;
+    }
+    setEmail(submittedEmail);
+
     setLoading(true);
     const supabase = createClient();
     // shouldCreateUser: false — accounts are provisioned by the admin only; a code request for an
     // unknown address must not silently create one.
     const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
+      email: submittedEmail,
       options: { shouldCreateUser: false },
     });
     setLoading(false);
@@ -83,8 +94,8 @@ export default function LoginPage() {
             <label>البريد الإلكتروني</label>
             <input
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              name="email"
+              defaultValue={email}
               required
               autoFocus
               autoComplete="email"
