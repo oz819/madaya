@@ -20,7 +20,14 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setLoading(false);
     if (error) {
-      setError("بيانات الدخول غير صحيحة");
+      // Only a real "wrong email/password" response gets the friendly message. Anything else
+      // (network failure, misconfigured Supabase URL/key, server error...) is a setup problem,
+      // not a credentials problem — say so distinctly instead of silently misleading the user.
+      setError(
+        error.code === "invalid_credentials"
+          ? "بيانات الدخول غير صحيحة"
+          : `تعذّر الاتصال بالخادم (${error.code ?? error.status ?? "خطأ غير معروف"}). راجع الإعداد أو تواصل مع المدير.`
+      );
       return;
     }
 
