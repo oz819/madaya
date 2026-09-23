@@ -37,9 +37,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: createError?.message || "تعذّر إنشاء الحساب" }, { status: 400 });
   }
 
+  // upsert, not insert: a DB trigger (private.handle_new_user) auto-provisions a default
+  // "USER" profile row for every new auth.users row, including this one — this call must
+  // overwrite that default with the real TEACHER role rather than conflict with it.
   const { error: profileError } = await adminClient
     .from("profiles")
-    .insert({ id: created.user.id, name, role: "TEACHER", active: true });
+    .upsert({ id: created.user.id, name, role: "TEACHER", active: true }, { onConflict: "id" });
   if (profileError) {
     // Roll back the orphaned auth user so a failed profile insert doesn't leave a half-created account.
     await adminClient.auth.admin.deleteUser(created.user.id);

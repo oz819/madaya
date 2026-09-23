@@ -30,21 +30,19 @@ export default function LoginPage() {
 
     setLoading(true);
     const supabase = createClient();
-    // shouldCreateUser: false — accounts are provisioned by the admin only; a code request for an
-    // unknown address must not silently create one.
+    // shouldCreateUser: true — any address that can receive and verify the emailed code is let
+    // in; Supabase provisions the auth account on first request. OTP verification (verifyCode
+    // below) is still the only way to obtain a session — this only controls whether an unknown
+    // email is allowed to *start* that flow.
     const { error } = await supabase.auth.signInWithOtp({
       email: submittedEmail,
-      options: { shouldCreateUser: false },
+      options: { shouldCreateUser: true },
     });
     setLoading(false);
     if (error) {
-      // otp_disabled from signInWithOtp({ shouldCreateUser: false }) means Supabase refused to
-      // originate a new account for this address — i.e. it isn't one the admin has provisioned.
       setError(
         error.code === "over_email_send_rate_limit"
           ? "تم إرسال عدد كبير من الطلبات. انتظر قليلًا ثم أعد المحاولة."
-          : error.code === "otp_disabled"
-          ? "هذا البريد الإلكتروني غير مسجَّل في النظام. تواصل مع المدير لإضافة حسابك."
           : `تعذّر إرسال الكود (${error.code ?? error.status ?? "خطأ غير معروف"}). راجع الإعداد أو تواصل مع المدير.`
       );
       return;
