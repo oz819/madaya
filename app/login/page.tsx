@@ -79,15 +79,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login">
-      <div className="loginbox">
-        <h1>📖 حلقات القرآن</h1>
-        <p className="center muted">منظومة متابعة الحفظ والمراجعة والتلاوة والنمو التربوي</p>
-
-        <div className="dedication">
-          <p className="dedication-title">🤍 عن روح المرحوم زيد سيف الدين</p>
-          <p className="dedication-dua">اللهم اجعل هذا العمل صدقةً جاريةً عنه، واجزه عن القرآن وأهله خير الجزاء.</p>
+    <div className="login islamic-bg">
+      <div className="loginbox islamic-card">
+        <div className="brand">
+          <h1 className="brand-main">مركز مضايا الثقافي</h1>
+          <h2 className="brand-sub">حلقات القرآن</h2>
+          <div className="brand-divider" />
         </div>
+        <p className="center muted">منظومة متابعة الحفظ والمراجعة والتلاوة والنمو التربوي</p>
 
         {step === "email" ? (
           <form onSubmit={sendCode} style={{ marginTop: 18 }}>
@@ -137,6 +136,12 @@ export default function LoginPage() {
             </button>
           </form>
         )}
+      </div>
+
+      <div className="dev-credit">
+        <p>عمل المطور والمهندس</p>
+        <p className="dev-name">اسامه زيد سيف الدين</p>
+        <p className="dev-memorial">عن روح المرحوم زيد سيف الدين</p>
       </div>
     </div>
   );

@@ -55,3 +55,22 @@ th{background:#f0f5f2}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .toast{position:fixed;bottom:18px;left:18px;background:#17332a;color:#fff;padding:11px 15px;border-radius:10px;z-index:100}
 @media(max-width:650px){nav{top:68px}.two{grid-template-columns:1fr}th:nth-child(5),td:nth-child(5){display:none}header h1{font-size:17px}header p{display:none}.headerrow{gap:8px}.userbox{font-size:11px}.userbox button{padding:6px 9px}}
+
+/* Islamic-themed login page — scoped to .islamic-bg/.islamic-card so other auth pages (forgot/reset
+   password) keep the plain .login/.loginbox look. */
+.islamic-bg{position:relative;overflow:hidden;background:radial-gradient(circle at 85% 12%,rgba(199,161,74,.35),transparent 45%),radial-gradient(circle at 8% 92%,rgba(199,161,74,.2),transparent 50%),linear-gradient(160deg,#0a2e22 0%,#0f3d2c 45%,#123f2e 100%)}
+.islamic-bg::before{content:"";position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cg fill='none' stroke='%23c7a14a' stroke-width='1'%3E%3Cpath d='M75 0 L150 75 L75 150 L0 75 Z'/%3E%3Cpath d='M75 25 L125 75 L75 125 L25 75 Z'/%3E%3Ccircle cx='75' cy='75' r='6'/%3E%3C/g%3E%3C/svg%3E");background-size:150px 150px;opacity:.16;pointer-events:none}
+.islamic-bg::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(5,20,15,.55) 100%);pointer-events:none}
+.islamic-card{position:relative;z-index:5;background:rgba(253,250,240,.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(199,161,74,.45);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.islamic-card::before,.islamic-card::after{content:"✦";position:absolute;top:14px;color:var(--gold);font-size:14px;opacity:.55}
+.islamic-card::before{right:16px}
+.islamic-card::after{left:16px}
+.brand{text-align:center}
+.brand-main{margin:0;color:var(--g2);font-size:21px;font-weight:800}
+.brand-sub{margin:4px 0 0;color:var(--gold);font-size:15px;font-weight:700}
+.brand-divider{width:70px;height:3px;margin:10px auto 0;background:linear-gradient(90deg,transparent,var(--gold),transparent);border-radius:3px}
+.dev-credit{position:fixed;z-index:1;bottom:16px;left:16px;max-width:190px;color:#f4ead0;font-size:11px;line-height:1.7;text-align:right;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+.dev-credit p{margin:0}
+.dev-credit .dev-name{font-weight:700;color:#e8cf8a;font-size:12px}
+.dev-credit .dev-memorial{opacity:.85}
+@media(max-width:480px){.dev-credit{font-size:10px;bottom:10px;left:10px;max-width:150px}}
