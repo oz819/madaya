@@ -40,9 +40,14 @@ export default function LoginPage() {
     });
     setLoading(false);
     if (error) {
+      // unexpected_failure here is Supabase relaying a hard SMTP-provider rejection (e.g. a
+      // sender-domain restriction) — a real delivery failure, not a client bug. Say so plainly
+      // instead of a bare status code; never claim the code was sent when it wasn't.
       setError(
         error.code === "over_email_send_rate_limit"
           ? "تم إرسال عدد كبير من الطلبات. انتظر قليلًا ثم أعد المحاولة."
+          : error.code === "unexpected_failure"
+          ? "تعذّر إرسال البريد الإلكتروني حاليًا بسبب مشكلة في خدمة البريد. أعد المحاولة لاحقًا أو تواصل مع المدير."
           : `تعذّر إرسال الكود (${error.code ?? error.status ?? "خطأ غير معروف"}). راجع الإعداد أو تواصل مع المدير.`
       );
       return;
