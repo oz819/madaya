@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 700" fill="none">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="42%" r="55%">
+      <stop offset="0%" stop-color="#e8cf8a" stop-opacity="0.55"/>
+      <stop offset="55%" stop-color="#c7a14a" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#c7a14a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f1e3b8"/>
+      <stop offset="100%" stop-color="#c7a14a"/>
+    </linearGradient>
+  </defs>
+
+  <circle cx="450" cy="300" r="320" fill="url(#glow)"/>
+
+  <!-- crescent moon -->
+  <path d="M700 90c-38-10-66 20-66 56 0 38 30 66 66 66 10 0 20-2 28-6-16 20-40 32-68 32-46 0-84-38-84-84s38-84 84-84c16 0 30 4 40 20z" fill="url(#gold)" opacity="0.5"/>
+  <!-- stars -->
+  <g fill="url(#gold)" opacity="0.5">
+    <circle cx="620" cy="70" r="3.5"/>
+    <circle cx="760" cy="150" r="2.5"/>
+    <circle cx="180" cy="90" r="2.5"/>
+    <circle cx="120" cy="180" r="3"/>
+    <circle cx="800" cy="230" r="2"/>
+  </g>
+
+  <!-- book stand (rehal) -->
+  <g stroke="url(#gold)" stroke-width="3" opacity="0.55" stroke-linecap="round">
+    <path d="M330 560 L450 470 L570 560"/>
+    <path d="M330 560 L570 560"/>
+    <path d="M450 470 L450 600"/>
+    <path d="M300 600 L600 600"/>
+  </g>
+
+  <!-- open book -->
+  <g opacity="0.85">
+    <path d="M450 190 C 340 205 270 260 262 360 C 258 430 300 480 450 500 Z"
+          fill="none" stroke="url(#gold)" stroke-width="3"/>
+    <path d="M450 190 C 560 205 630 260 638 360 C 642 430 600 480 450 500 Z"
+          fill="none" stroke="url(#gold)" stroke-width="3"/>
+    <path d="M450 192 C 448 280 448 410 450 498" stroke="url(#gold)" stroke-width="3" opacity="0.7"/>
+
+    <!-- text lines, left page -->
+    <g stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round" opacity="0.55">
+      <path d="M320 250 L410 244"/>
+      <path d="M312 275 L415 269"/>
+      <path d="M308 300 L418 296"/>
+      <path d="M306 325 L420 322"/>
+      <path d="M308 350 L418 348"/>
+      <path d="M312 375 L415 374"/>
+      <path d="M318 400 L410 400"/>
+      <path d="M326 425 L404 425"/>
+    </g>
+
+    <!-- text lines, right page -->
+    <g stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round" opacity="0.55">
+      <path d="M580 250 L490 244"/>
+      <path d="M588 275 L485 269"/>
+      <path d="M592 300 L482 296"/>
+      <path d="M594 325 L480 322"/>
+      <path d="M592 350 L482 348"/>
+      <path d="M588 375 L485 374"/>
+      <path d="M582 400 L490 400"/>
+      <path d="M574 425 L496 425"/>
+    </g>
+  </g>
+</svg>
