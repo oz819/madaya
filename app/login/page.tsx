@@ -38,9 +38,13 @@ export default function LoginPage() {
     });
     setLoading(false);
     if (error) {
+      // otp_disabled from signInWithOtp({ shouldCreateUser: false }) means Supabase refused to
+      // originate a new account for this address — i.e. it isn't one the admin has provisioned.
       setError(
         error.code === "over_email_send_rate_limit"
           ? "تم إرسال عدد كبير من الطلبات. انتظر قليلًا ثم أعد المحاولة."
+          : error.code === "otp_disabled"
+          ? "هذا البريد الإلكتروني غير مسجَّل في النظام. تواصل مع المدير لإضافة حسابك."
           : `تعذّر إرسال الكود (${error.code ?? error.status ?? "خطأ غير معروف"}). راجع الإعداد أو تواصل مع المدير.`
       );
       return;
