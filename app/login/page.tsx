@@ -106,6 +106,8 @@ export default function LoginPage() {
         {[...Array(5)].map((_, i) => (
           <span key={i} className={`aurora a${i + 1}`} />
         ))}
+        {/* Faint gold eight-point-star lattice drifting diagonally. */}
+        <div className="landing-pattern" />
         <div className="landing-art">
           <span className="moon-glow" />
         </div>
@@ -123,14 +125,16 @@ export default function LoginPage() {
       </button>
 
       <main className="landing-hero">
-        <Image
-          src="/images/logo.png"
-          alt="شعار المركز الثقافي الدعوي في مضايا"
-          width={240}
-          height={240}
-          className="landing-logo"
-          priority
-        />
+        <div className="logo-wrap">
+          <Image
+            src="/images/logo.png"
+            alt="شعار المركز الثقافي الدعوي في مضايا"
+            width={300}
+            height={300}
+            className="landing-logo"
+            priority
+          />
+        </div>
         <h1 className="landing-title">المركز الثقافي الدعوي في مضايا</h1>
         <div className="brand-divider" />
         <section className="landing-about">

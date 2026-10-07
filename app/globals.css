@@ -131,7 +131,7 @@ label.inline input{width:auto}
 /* Landing page (/login): centre logo + about text; the login form opens in a dialog. */
 .landing{min-height:100vh;padding:84px 16px 120px;display:flex;justify-content:center;align-items:flex-start}
 .landing-hero{position:relative;z-index:5;width:100%;max-width:760px;display:flex;flex-direction:column;align-items:center;text-align:center}
-.landing-logo{width:210px;height:210px;border-radius:50%;background:#fff;box-shadow:0 10px 35px rgba(0,0,0,.35),0 0 0 4px rgba(199,161,74,.55)}
+.landing-logo{position:relative;display:block;width:260px;height:260px;border-radius:50%;background:#fff;box-shadow:0 10px 35px rgba(0,0,0,.35),0 0 0 4px rgba(199,161,74,.55)}
 .landing-title{margin:20px 0 0;color:#f4ead0;font-size:28px;font-weight:800;line-height:1.5;text-shadow:0 2px 8px rgba(0,0,0,.45)}
 .landing-hero .brand-divider{width:110px}
 .landing-about{margin-top:26px;width:100%;max-width:700px;text-align:right;background:rgba(253,250,240,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(199,161,74,.45);border-radius:18px;padding:20px 24px;box-shadow:0 14px 45px rgba(0,0,0,.3)}
@@ -143,7 +143,7 @@ label.inline input{width:auto}
 .login-overlay .loginbox{position:relative;background:#fdfaf0;backdrop-filter:none;-webkit-backdrop-filter:none}
 .login-overlay .islamic-card::after{display:none}
 .login-close{position:absolute;top:10px;left:12px;background:transparent;color:var(--g2);padding:4px 8px;font-size:16px}
-@media(max-width:600px){.landing{padding-top:72px}.landing-logo{width:160px;height:160px}.landing-title{font-size:22px}.landing-about{padding:16px 16px}.landing-about p{font-size:15px}.login-trigger{top:10px;right:10px;padding:8px 13px}}
+@media(max-width:600px){.landing{padding-top:72px}.landing-logo{width:190px;height:190px}.landing-title{font-size:22px}.landing-about{padding:16px 16px}.landing-about p{font-size:15px}.login-trigger{top:10px;right:10px;padding:8px 13px}}
 
 /* ---- Landing motion: slow, calm, transform/opacity only; all off for prefers-reduced-motion ---- */
 /* The book/crescent artwork is drawn by .landing-art instead of .islamic-bg::before (same image,
@@ -173,15 +173,29 @@ label.inline input{width:auto}
 .twinkle.t5{top:78%;left:22%;width:2px;height:2px;animation-duration:7.5s;animation-delay:2.4s}
 .twinkle.t6{top:6%;left:58%;width:2px;height:2px;animation-duration:6s;animation-delay:4s}
 .twinkle.t7{top:88%;left:70%;animation-duration:8.5s;animation-delay:1.2s}
-.landing-logo,.landing-title,.landing-hero .brand-divider,.landing-about{animation:landing-rise 1.4s cubic-bezier(.22,.61,.36,1) both}
-.landing-logo{animation-delay:.15s}
+.logo-wrap,.landing-title,.landing-hero .brand-divider,.landing-about{animation:landing-rise 1.4s cubic-bezier(.22,.61,.36,1) both}
+.logo-wrap{animation-delay:.15s}
 .landing-title,.landing-hero .brand-divider{animation-delay:.65s}
 .landing-about{animation-delay:1.15s}
 @keyframes moon-glow{0%,100%{opacity:.3}50%{opacity:.85}}
 @keyframes twinkle{0%,100%{opacity:.1;transform:scale(.7)}50%{opacity:.9;transform:scale(1.15)}}
 @keyframes landing-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){
-  .aurora,.moon-glow,.twinkle,.landing-logo,.landing-title,.landing-hero .brand-divider,.landing-about{animation:none!important}
+  .aurora,.landing-pattern,.logo-wrap::before,.moon-glow,.twinkle,.logo-wrap,.landing-title,.landing-hero .brand-divider,.landing-about{animation:none!important}
   .moon-glow{opacity:.45}
   .twinkle{opacity:.5}
 }
+
+/* ---- Islamic pattern, vignette and logo halo (transform/opacity only; off for reduced motion) ---- */
+/* One 96px tile of an eight-point star lattice; the layer is one tile larger than the page on each
+   side and moves exactly one tile diagonally per cycle, so the loop is seamless. */
+.landing-pattern{position:absolute;inset:-96px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Cg fill='none' stroke='%23e8cf8a' stroke-width='1.1'%3E%3Crect x='27' y='27' width='42' height='42'/%3E%3Crect x='27' y='27' width='42' height='42' transform='rotate(45 48 48)'/%3E%3Ccircle cx='48' cy='48' r='9'/%3E%3Cpath d='M48 0v18.3M48 96V77.7M0 48h18.3M96 48H77.7M0 0l27 27M96 0L69 27M0 96l27-27M96 96L69 69'/%3E%3C/g%3E%3C/svg%3E") 0 0/96px 96px repeat;opacity:.07;animation:pattern-drift 60s linear infinite;will-change:transform}
+@keyframes pattern-drift{from{transform:translate3d(0,0,0)}to{transform:translate3d(96px,96px,0)}}
+/* Stronger edge vignette so the eye settles on the logo. */
+.landing.islamic-bg::after{z-index:1;background:radial-gradient(ellipse 75% 70% at 50% 38%,transparent 35%,rgba(3,16,11,.45) 75%,rgba(2,12,8,.75) 100%)}
+.landing-hero{z-index:5}
+/* Soft gold halo that breathes slowly behind the logo. */
+.logo-wrap{position:relative;display:inline-block;border-radius:50%}
+.logo-wrap::before{content:"";position:absolute;left:50%;top:50%;width:150%;height:150%;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(232,207,138,.38) 0%,rgba(199,161,74,.16) 42%,transparent 68%);animation:halo-breathe 7s ease-in-out infinite;pointer-events:none}
+@keyframes halo-breathe{0%,100%{opacity:.6;transform:translate(-50%,-50%) scale(.96)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.04)}}
+.landing .dev-credit{z-index:2}
