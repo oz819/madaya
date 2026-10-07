@@ -2,9 +2,21 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { Amiri, Reem_Kufi } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { NOT_REGISTERED_MESSAGE } from "@/lib/messages";
+import { FacebookIcon, GitHubIcon, InstagramIcon, WhatsAppIcon } from "@/components/SocialIcons";
+
+// Amiri for the about text, Reem Kufi for headings (exposed as CSS variables, see globals.css).
+const amiri = Amiri({ subsets: ["arabic"], weight: ["400", "700"], variable: "--font-amiri", display: "swap" });
+const reemKufi = Reem_Kufi({ subsets: ["arabic"], variable: "--font-reem-kufi", display: "swap" });
+
+const SOCIAL_LINKS = [
+  { href: "https://www.facebook.com/share/1HjPsLvumo/", label: "صفحتنا على فيسبوك", Icon: FacebookIcon },
+  { href: "https://www.instagram.com/lmrkzlthqfyldwy", label: "حسابنا على انستغرام", Icon: InstagramIcon },
+  { href: "https://wa.me/963993323763", label: "تواصل معنا عبر واتساب", Icon: WhatsAppIcon },
+];
 
 type Step = "email" | "code";
 
@@ -99,7 +111,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="landing islamic-bg" dir="rtl" lang="ar">
+    <div className={`landing islamic-bg ${amiri.variable} ${reemKufi.variable}`} dir="rtl" lang="ar">
       {/* Decorative, CSS-only background motion (see "Landing motion" in globals.css). */}
       <div className="landing-sky" aria-hidden="true">
         {/* Large soft light blobs drifting at different speeds, like a calm aurora. */}
@@ -138,11 +150,41 @@ export default function LoginPage() {
         <h1 className="landing-title">المركز الثقافي الدعوي في مضايا</h1>
         <div className="brand-divider" />
         <section className="landing-about">
+          <span className="corner tl" aria-hidden="true" />
+          <span className="corner tr" aria-hidden="true" />
+          <span className="corner bl" aria-hidden="true" />
+          <span className="corner br" aria-hidden="true" />
           <h2>نبذة عن المركز</h2>
+          <div className="ornament" aria-hidden="true">
+            <i />
+            <span>✦</span>
+            <i />
+          </div>
           <p>
-            المركز الثقافي الدعوي في مضايا. وقد كان مركزاً لنشر عقائد حزب البعث فقمت بترميمه وإصلاحه وأصبح الآن مركزاً لنشر العلم والهدى ولتدارس القرآن الكريم ولإقامة الدورات العلمية وليجد الشباب فيه بغيتهم من النشاطات الثقافية، وأتولى الآن الإشراف عليه، فادعوا لنا أن يوفق هذا المركز للاستمرار وإنجاز المهمة الكبيرة التي سعى لها.
+            تأسس المركز الثقافي الدعوي في مضايا عام 2025 في بلدة مضايا بريف دمشق، بعد ترميم مبناه وإعادة تأهيله، ليتحول من مقرٍّ لنشر عقائد حزب البعث إلى منارةٍ للعلم والهدى، وذلك بإشراف{" "}
+            <a href="https://alabdah.com/about" target="_blank" rel="noopener noreferrer">
+              د. محمد العبده
+            </a>
+            .
           </p>
+          <p>
+            يحتضن المركز حلقات تحفيظ القرآن الكريم وتدارسه، ويقيم الدورات العلمية، ويفتح أبوابه للشباب بأنشطة ثقافية وتربوية هادفة يجدون فيها بغيتهم.
+          </p>
+          <p>نسأل الله أن يبارك في هذا المركز وأن يوفقه للاستمرار وأداء رسالته، ولا تنسونا من صالح دعائكم.</p>
         </section>
+
+        <div className="landing-social" role="navigation" aria-label="روابط التواصل">
+          <h3>تابعونا</h3>
+          <ul>
+            {SOCIAL_LINKS.map(({ href, label, Icon }) => (
+              <li key={href}>
+                <a href={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label}>
+                  <Icon />
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
       </main>
 
       {showLogin && (
@@ -210,11 +252,10 @@ export default function LoginPage() {
         </div>
       )}
 
-      <div className="dev-credit">
-        <p>عمل المطور والمهندس</p>
-        <p className="dev-name">اسامه زيد سيف الدين</p>
-        <p className="dev-memorial">عن روح المرحوم زيد سيف الدين</p>
-      </div>
+      <a className="github-link" href="https://github.com/oz819/madaya" target="_blank" rel="noopener noreferrer" aria-label="الكود المصدري على GitHub">
+        <GitHubIcon />
+        <span>GitHub</span>
+      </a>
     </div>
   );
 }
