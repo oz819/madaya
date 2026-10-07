@@ -32,3 +32,6 @@ next-env.d.ts
 
 # obsolete Express/Prisma prototype kept locally, not tracked
 _deprecated_express_backend_prototype/
+
+# netlify cli build output
+/.netlify

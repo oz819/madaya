@@ -102,7 +102,10 @@ export default function LoginPage() {
     <div className="landing islamic-bg" dir="rtl" lang="ar">
       {/* Decorative, CSS-only background motion (see "Landing motion" in globals.css). */}
       <div className="landing-sky" aria-hidden="true">
-        <div className="landing-light" />
+        {/* Large soft light blobs drifting at different speeds, like a calm aurora. */}
+        {[...Array(5)].map((_, i) => (
+          <span key={i} className={`aurora a${i + 1}`} />
+        ))}
         <div className="landing-art">
           <span className="moon-glow" />
         </div>
