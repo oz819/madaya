@@ -112,8 +112,8 @@ export default function LoginPage() {
         <Image
           src="/images/logo.png"
           alt="شعار المركز الثقافي الدعوي في مضايا"
-          width={160}
-          height={160}
+          width={240}
+          height={240}
           className="landing-logo"
           priority
         />
