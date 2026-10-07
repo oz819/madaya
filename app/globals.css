@@ -215,8 +215,9 @@ label.inline input{width:auto}
 .landing-social ul{list-style:none;margin:0;padding:0;display:flex;justify-content:center;gap:14px}
 .landing-social a{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;color:#f4ead0;background:rgba(6,34,24,.55);border:1px solid rgba(199,161,74,.7);box-shadow:0 4px 14px rgba(0,0,0,.3);transition:transform .25s ease,color .25s ease,border-color .25s ease}
 .landing-social a:hover,.landing-social a:focus-visible{transform:scale(1.1);color:#e8cf8a;border-color:#e8cf8a}
-/* Bottom-left of the page (not the viewport) so it never covers content while scrolling. */
-.github-link{position:absolute;z-index:2;bottom:16px;left:16px;display:inline-flex;align-items:center;gap:6px;color:rgba(244,234,208,.75);font-size:12px;text-decoration:none;transition:color .2s ease}
-.github-link:hover{color:#e8cf8a}
-@media(max-width:600px){.landing-about{padding:22px 18px 20px}.landing-about h2{font-size:20px}.landing-about p{font-size:17px}.github-link{bottom:10px;left:10px}}
+/* Pinned to the bottom-left corner on desktop (where the old developer credit was). On phones it
+   sits at the bottom of the page instead, so it never covers the social buttons while scrolling. */
+.github-link{position:fixed;z-index:20;bottom:16px;left:16px;display:inline-flex;align-items:center;gap:6px;color:rgba(232,207,138,.75);font-size:12px;text-decoration:none;transition:color .2s ease}
+.github-link:hover,.github-link:focus-visible{color:#f1dc9c}
+@media(max-width:600px){.landing-about{padding:22px 18px 20px}.landing-about h2{font-size:20px}.landing-about p{font-size:17px}.github-link{position:absolute;bottom:14px;left:14px}}
 @media (prefers-reduced-motion: reduce){.landing-social{animation:none}.landing-social a{transition:none}.landing-social a:hover{transform:none}}
