@@ -133,7 +133,7 @@ label.inline input{width:auto}
 .landing-hero{position:relative;z-index:5;width:100%;max-width:760px;display:flex;flex-direction:column;align-items:center;text-align:center}
 .landing-logo{width:210px;height:210px;border-radius:50%;background:#fff;box-shadow:0 10px 35px rgba(0,0,0,.35),0 0 0 4px rgba(199,161,74,.55)}
 .landing-title{margin:20px 0 0;color:#f4ead0;font-size:28px;font-weight:800;line-height:1.5;text-shadow:0 2px 8px rgba(0,0,0,.45)}
-.landing .brand-divider{width:110px}
+.landing-hero .brand-divider{width:110px}
 .landing-about{margin-top:26px;width:100%;max-width:700px;text-align:right;background:rgba(253,250,240,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(199,161,74,.45);border-radius:18px;padding:20px 24px;box-shadow:0 14px 45px rgba(0,0,0,.3)}
 .landing-about h2{margin:0 0 8px;color:var(--g2);font-size:18px}
 .landing-about p{margin:0;color:var(--text);font-size:16px;line-height:1.9;text-align:right}
@@ -144,3 +144,33 @@ label.inline input{width:auto}
 .login-overlay .islamic-card::after{display:none}
 .login-close{position:absolute;top:10px;left:12px;background:transparent;color:var(--g2);padding:4px 8px;font-size:16px}
 @media(max-width:600px){.landing{padding-top:72px}.landing-logo{width:160px;height:160px}.landing-title{font-size:22px}.landing-about{padding:16px 16px}.landing-about p{font-size:15px}.login-trigger{top:10px;right:10px;padding:8px 13px}}
+
+/* ---- Landing motion: slow, calm, transform/opacity only; all off for prefers-reduced-motion ---- */
+/* The book/crescent artwork is drawn by .landing-art instead of .islamic-bg::before (same image,
+   size and position) so the crescent can have its own glow layer. */
+.landing.islamic-bg::before{display:none}
+.landing-sky{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.landing-light{position:absolute;left:-25%;top:-25%;width:150%;height:150%;background:radial-gradient(circle at 35% 40%,rgba(199,161,74,.14),transparent 38%),radial-gradient(circle at 70% 65%,rgba(46,140,105,.12),transparent 42%);animation:landing-drift 26s ease-in-out infinite alternate;will-change:transform}
+.landing-art{position:absolute;left:50%;top:48%;width:min(760px,92%);aspect-ratio:900/700;transform:translate(-50%,-48%);background:url("/quran-bg.svg") center/contain no-repeat;opacity:.55;filter:blur(1.5px)}
+.moon-glow{position:absolute;left:73.3%;top:24.3%;width:30%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(241,227,184,.55) 0%,rgba(199,161,74,.22) 38%,transparent 70%);opacity:.35;animation:moon-glow 9s ease-in-out infinite;will-change:opacity}
+.twinkle{position:absolute;width:3px;height:3px;border-radius:50%;background:#f1e3b8;box-shadow:0 0 6px 1px rgba(241,227,184,.7);opacity:.15;animation:twinkle 6s ease-in-out infinite;will-change:opacity,transform}
+.twinkle.t1{top:9%;left:14%;animation-duration:7s}
+.twinkle.t2{top:18%;left:86%;animation-duration:5.5s;animation-delay:1.8s}
+.twinkle.t3{top:34%;left:6%;animation-duration:8s;animation-delay:3.1s}
+.twinkle.t4{top:62%;left:92%;animation-duration:6.5s;animation-delay:.9s}
+.twinkle.t5{top:78%;left:22%;width:2px;height:2px;animation-duration:7.5s;animation-delay:2.4s}
+.twinkle.t6{top:6%;left:58%;width:2px;height:2px;animation-duration:6s;animation-delay:4s}
+.twinkle.t7{top:88%;left:70%;animation-duration:8.5s;animation-delay:1.2s}
+.landing-logo,.landing-title,.landing-hero .brand-divider,.landing-about{animation:landing-rise 1.4s cubic-bezier(.22,.61,.36,1) both}
+.landing-logo{animation-delay:.15s}
+.landing-title,.landing-hero .brand-divider{animation-delay:.65s}
+.landing-about{animation-delay:1.15s}
+@keyframes landing-drift{0%{transform:translate3d(-4%,-3%,0)}50%{transform:translate3d(3%,2%,0)}100%{transform:translate3d(5%,-2%,0)}}
+@keyframes moon-glow{0%,100%{opacity:.3}50%{opacity:.85}}
+@keyframes twinkle{0%,100%{opacity:.1;transform:scale(.7)}50%{opacity:.9;transform:scale(1.15)}}
+@keyframes landing-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){
+  .landing-light,.moon-glow,.twinkle,.landing-logo,.landing-title,.landing-hero .brand-divider,.landing-about{animation:none!important}
+  .moon-glow{opacity:.45}
+  .twinkle{opacity:.5}
+}
