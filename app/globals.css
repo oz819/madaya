@@ -127,3 +127,20 @@ label.inline input{width:auto}
 .install-hint{margin:10px 0}
 @media(max-width:650px){.range{grid-template-columns:1fr}.search-row{grid-template-columns:1fr}.student-head h2{font-size:18px}}
 @media print{.no-print,header,nav,.toast{display:none!important}body{background:#fff}main{max-width:none;padding:0}.card{box-shadow:none;border:0}th,td{font-size:11px}}
+
+/* Landing page (/login): centre logo + about text; the login form opens in a dialog. */
+.landing{min-height:100vh;padding:84px 16px 120px;display:flex;justify-content:center;align-items:flex-start}
+.landing-hero{position:relative;z-index:5;width:100%;max-width:760px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.landing-logo{width:150px;height:150px;border-radius:50%;background:#fff;box-shadow:0 10px 35px rgba(0,0,0,.35),0 0 0 4px rgba(199,161,74,.55)}
+.landing-title{margin:20px 0 0;color:#f4ead0;font-size:28px;font-weight:800;line-height:1.5;text-shadow:0 2px 8px rgba(0,0,0,.45)}
+.landing .brand-divider{width:110px}
+.landing-about{margin-top:26px;width:100%;max-width:700px;text-align:right;background:rgba(253,250,240,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(199,161,74,.45);border-radius:18px;padding:20px 24px;box-shadow:0 14px 45px rgba(0,0,0,.3)}
+.landing-about h2{margin:0 0 8px;color:var(--g2);font-size:18px}
+.landing-about p{margin:0;color:var(--text);font-size:16px;line-height:1.9;text-align:right}
+.login-trigger{position:fixed;top:14px;right:16px;z-index:30;display:inline-flex;align-items:center;gap:8px;background:rgba(253,250,240,.95);color:var(--g2);border:1px solid rgba(199,161,74,.6);border-radius:999px;padding:9px 16px;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.login-trigger:hover{background:#fff}
+.login-overlay{position:fixed;inset:0;z-index:40;background:rgba(5,20,15,.6);display:grid;place-items:center;padding:16px;overflow:auto}
+.login-overlay .loginbox{position:relative;background:#fdfaf0;backdrop-filter:none;-webkit-backdrop-filter:none}
+.login-overlay .islamic-card::after{display:none}
+.login-close{position:absolute;top:10px;left:12px;background:transparent;color:var(--g2);padding:4px 8px;font-size:16px}
+@media(max-width:600px){.landing{padding-top:72px}.landing-logo{width:110px;height:110px}.landing-title{font-size:22px}.landing-about{padding:16px 16px}.landing-about p{font-size:15px}.login-trigger{top:10px;right:10px;padding:8px 13px}}
