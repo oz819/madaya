@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import { NOT_REGISTERED_MESSAGE } from "@/lib/messages";
 
 type Step = "email" | "code";
 
@@ -30,13 +31,13 @@ export default function LoginPage() {
 
     setLoading(true);
     const supabase = createClient();
-    // shouldCreateUser: true — any address that can receive and verify the emailed code is let
-    // in; Supabase provisions the auth account on first request. OTP verification (verifyCode
-    // below) is still the only way to obtain a session — this only controls whether an unknown
-    // email is allowed to *start* that flow.
+    // shouldCreateUser: false — only accounts the admin created can sign in (spec §3.2). For an
+    // unknown email Supabase answers otp_disabled / signup_disabled and no auth.users row is
+    // created. This flag is only page code; the real block is "Allow new users to sign up" being
+    // off in the Supabase dashboard (see README).
     const { error } = await supabase.auth.signInWithOtp({
       email: submittedEmail,
-      options: { shouldCreateUser: true },
+      options: { shouldCreateUser: false },
     });
     setLoading(false);
     if (error) {
@@ -44,7 +45,9 @@ export default function LoginPage() {
       // sender-domain restriction) — a real delivery failure, not a client bug. Say so plainly
       // instead of a bare status code; never claim the code was sent when it wasn't.
       setError(
-        error.code === "over_email_send_rate_limit"
+        error.code === "otp_disabled" || error.code === "signup_disabled" || error.code === "user_not_found"
+          ? NOT_REGISTERED_MESSAGE
+          : error.code === "over_email_send_rate_limit"
           ? "تم إرسال عدد كبير من الطلبات. انتظر قليلًا ثم أعد المحاولة."
           : error.code === "unexpected_failure"
           ? "تعذّر إرسال البريد الإلكتروني حاليًا بسبب مشكلة في خدمة البريد. أعد المحاولة لاحقًا أو تواصل مع المدير."

@@ -1,38 +1,42 @@
+import type { Tables } from "@/lib/supabase/database.types";
+
+export type Role = "ADMIN" | "TEACHER";
+
 export type Profile = {
   id: string;
   name: string;
-  role: "ADMIN" | "TEACHER";
+  role: Role;
   active: boolean;
-};
-
-export type Circle = {
-  id: string;
-  name: string;
-  teacher_id: string | null;
 };
 
 export type Surah = { surah_no: number; name: string; ayah_count: number };
 
-export type StudentRow = {
-  id: string;
-  name: string;
-  circle_id: string;
-  circle_name: string;
-  teacher_name: string | null;
-  current_surah: string | null;
-  current_surah_no: number | null;
-  current_from_ayah: number | null;
-  current_to_ayah: number | null;
-  current_grade: string | null;
-  score: number;
-  score_label: string;
-  rank_value: number;
+export type Circle = Tables<"circles">;
+export type Student = Tables<"students">;
+export type QuranEntry = Tables<"quran_entries">;
+export type Attendance = Tables<"attendance">;
+export type ArabicBook = Tables<"arabic_books">;
+export type ArabicEnrollment = Tables<"student_arabic_enrollments">;
+export type ArabicEntry = Tables<"arabic_entries">;
+export type EduNote = Tables<"edu_notes">;
+export type TalqeenSession = Tables<"talqeen_sessions">;
+
+export type QuranTrack = "HIFZ" | "TILAWA" | "MURAJAA" | "TALQEEN";
+
+export const TRACK_LABEL: Record<QuranTrack, string> = {
+  HIFZ: "الحفظ",
+  TILAWA: "التلاوة",
+  MURAJAA: "المراجعة",
+  TALQEEN: "التلقين",
 };
 
-export const WORK_TYPE_LABEL: Record<string, string> = {
-  NEW_MEMORIZATION: "حفظ جديد",
-  REVIEW: "مراجعة",
-  TILAWAH: "تلاوة",
+export type AttendanceStatus = "PRESENT" | "LATE" | "EXCUSED" | "ABSENT";
+
+export const ATTENDANCE_LABEL: Record<AttendanceStatus, string> = {
+  PRESENT: "حاضر",
+  LATE: "متأخر",
+  EXCUSED: "غائب بعذر",
+  ABSENT: "غائب",
 };
 
 export const EDU_AREAS = [
@@ -43,23 +47,22 @@ export const EDU_AREAS = [
   "الأثر القرآني والمبادرة",
 ] as const;
 
-export const GRADES = ["", "ممتاز", "جيد جدًا", "جيد", "إعادة", "تمكين"] as const;
-export const TILAWAH_GRADES = ["ممتاز", "جيد جدًا", "جيد", "إعادة", "تمكين"] as const;
+export const QUALITIES = ["ممتاز", "جيد جدًا", "جيد", "إعادة", "تمكين"] as const;
 
-export function ayahsBefore(surahs: Surah[], surahNo: number): number {
-  let n = 0;
-  for (const s of surahs) {
-    if (s.surah_no < surahNo) n += s.ayah_count;
-  }
-  return n;
-}
-
-export function tilawahPercent(surahs: Surah[], surahNo: number, ayah: number): number {
-  const total = surahs.reduce((sum, s) => sum + s.ayah_count, 0);
-  if (!total) return 0;
-  return Math.round(((ayahsBefore(surahs, surahNo) + (ayah || 0)) / total) * 100);
-}
-
+// Local calendar date (YYYY-MM-DD). toISOString() would give the UTC date, which is the wrong day
+// for entries made after midnight local time in UTC+ zones.
 export function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  return localDateStr(new Date());
+}
+
+export function localDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+export function addDays(date: string, days: number): string {
+  const [y, m, d] = date.split("-").map(Number);
+  return localDateStr(new Date(y, m - 1, d + days));
 }

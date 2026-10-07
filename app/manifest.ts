@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "منظومة متابعة حلقات القرآن",
     short_name: "حلقات القرآن",
-    description: "متابعة علمية وتربوية متكاملة — الحفظ، المراجعة، التلاوة، الحضور والنقاط",
+    description: "متابعة الحفظ والتلاوة والمراجعة والتلقين والعربية والتربية — تعمل بدون إنترنت",
     lang: "ar",
     dir: "rtl",
     start_url: "/",

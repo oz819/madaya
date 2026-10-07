@@ -74,3 +74,56 @@ th{background:#f0f5f2}
 .dev-credit .dev-name{font-weight:700;color:#e8cf8a;font-size:12px}
 .dev-credit .dev-memorial{opacity:.85}
 @media(max-width:480px){.dev-credit{font-size:10px;bottom:10px;left:10px;max-width:150px}}
+
+/* ---- Tracks / student card / offline UI ---- */
+button.link{background:none;color:var(--g2);padding:4px 6px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+button.link.danger-link,.danger-link{color:var(--red)}
+.row-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.formgrid.compact{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:8px}
+.formgrid .wide{grid-column:1/-1}
+.range{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.range-side{display:grid;grid-template-columns:1fr 80px;gap:4px 8px;align-items:end;background:#f6faf8;border:1px solid var(--line);border-radius:12px;padding:8px}
+.range-side label:nth-of-type(1){grid-column:1}.range-side label:nth-of-type(2){grid-column:2;grid-row:1}
+.range-side select{grid-column:1;grid-row:2}.range-side input{grid-column:2;grid-row:2}
+.entry-form{border-bottom:1px dashed var(--line);padding-bottom:12px;margin-bottom:8px}
+.entry-form .row-actions{margin-top:10px}
+.history{list-style:none;margin:0;padding:0}
+.history li{display:flex;justify-content:space-between;gap:8px;padding:9px 4px;border-bottom:1px solid #edf1ef;font-size:13px}
+.history li.editing{background:#fff8df}
+.history .badge{margin-inline-start:6px}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 4px;margin-top:4px}
+.tabs button{background:#eef4f0;color:var(--g2);white-space:nowrap}
+.tabs button.active{background:var(--g);color:#fff}
+.att-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:6px 11px;background:#eef4f0;color:var(--g2);font-size:12px;font-weight:600;border:1px solid transparent}
+.chip.on{background:var(--g);color:#fff}
+.chip.on.late,.chip.on.excused{background:var(--gold)}
+.chip.on.absent{background:var(--red)}
+.chip.on .link{color:#fff}
+.chip input{width:auto;margin:0}
+.positions{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.pos-tile{background:#f6faf8;border:1px solid var(--line);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:3px;font-size:13px}
+.student-head h2{font-size:20px;color:var(--g2)}
+.search-row{display:grid;grid-template-columns:2fr 1fr;gap:8px;margin:10px 0}
+.recent{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0}
+label.inline{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--text);margin:0}
+label.inline input{width:auto}
+.student-list{list-style:none;margin:0;padding:0}
+.student-list li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 6px;border-bottom:1px solid #edf1ef;cursor:pointer}
+.student-list li:hover{background:#f6faf8}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gold);margin-inline-start:6px;vertical-align:middle}
+.roster{list-style:none;margin:0;padding:0}
+.roster li{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:9px 4px;border-bottom:1px solid #edf1ef;flex-wrap:wrap}
+.roster .note-input{max-width:260px;padding:7px}
+.userbox-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:5px;position:relative}
+.sync-badge{font-size:11px;padding:6px 9px;background:#ffffff26}
+.sync-badge.warn{background:#d3a629;color:#2b2100}
+.sync-badge.bad{background:var(--red)}
+.sync-badge.off{background:#ffffff40}
+.sync-panel{position:absolute;top:36px;left:0;width:min(340px,90vw);background:#fff;color:var(--text);border-radius:14px;box-shadow:0 10px 40px #0003;padding:12px;z-index:50;text-align:right;max-height:70vh;overflow:auto}
+.outbox{list-style:none;padding:0;margin:10px 0 0}
+.outbox li{display:flex;justify-content:space-between;gap:6px;padding:8px 0;border-top:1px solid #edf1ef;font-size:12px}
+.outbox li.failed{background:#fff0ee}
+.install-hint{margin:10px 0}
+@media(max-width:650px){.range{grid-template-columns:1fr}.search-row{grid-template-columns:1fr}.student-head h2{font-size:18px}}
+@media print{.no-print,header,nav,.toast{display:none!important}body{background:#fff}main{max-width:none;padding:0}.card{box-shadow:none;border:0}th,td{font-size:11px}}

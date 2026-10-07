@@ -37,9 +37,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: createError?.message || "تعذّر إنشاء الحساب" }, { status: 400 });
   }
 
-  // upsert, not insert: a DB trigger (private.handle_new_user) auto-provisions a default
-  // "USER" profile row for every new auth.users row, including this one — this call must
-  // overwrite that default with the real TEACHER role rather than conflict with it.
+  // upsert, not insert: harmless if a profile row already exists for this id (e.g. a re-run
+  // after a partial failure), and it always ends up as an active TEACHER.
   const { error: profileError } = await adminClient
     .from("profiles")
     .upsert({ id: created.user.id, name, role: "TEACHER", active: true }, { onConflict: "id" });

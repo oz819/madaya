@@ -1,128 +1,149 @@
-# منظومة متابعة حلقات القرآن — نسخة Production
+# منظومة متابعة حلقات القرآن — مركز مضايا الثقافي
 
-تطبيق ويب حقيقي (Multi-user) مبني بالاعتماد على الـ prototype الأصلي
-`quran_halaqat_tracker_tarbawi_v2-2.html`. راجع `PROJECT_ANALYSIS.md` لتفاصيل تحليل الملف الأصلي.
+تطبيق ويب (PWA قابل للتثبيت ويعمل بدون إنترنت) لمتابعة الطلاب على **مسارات مستقلة**: الحفظ،
+التلاوة، المراجعة، التلقين، العربية (بالصفحات)، والتربية، إضافة للحضور. المواصفات الكاملة في
+`2026-10-06-tracks-halaqat-reporting.md` (خارج المستودع). راجع `PROJECT_ANALYSIS.md` لتاريخ المشروع
+وتحليل الـ prototype الأصلي `quran_halaqat_tracker_tarbawi_v2-2.html`.
 
-> **ملاحظة مهمة:** المشروع مرّ بمرحلتين معماريتين. البداية كانت Express + Prisma (موثّقة في
-> `PROJECT_ANALYSIS.md`)، ثم تم التحويل بقرار صريح إلى **Next.js + Supabase Auth + RLS مباشرة**
-> (بدون Backend وسيط خاص) — وهذا هو الوضع الحالي الفعلي للكود. نسخة Express القديمة محفوظة محليًا
-> في `_deprecated_express_backend_prototype/` (غير متتبّعة بـ git، لن تُرفع لأي مستودع) للرجوع
-> إليها فقط، وليست جزءًا من التطبيق العامل.
+> المشروع بدأ بـ Express + Prisma ثم تحوّل إلى **Next.js + Supabase Auth + RLS مباشرة**. نسخة
+> Express القديمة محفوظة محليًا في `_deprecated_express_backend_prototype/` (غير متتبّعة بـ git).
 
-## البنية الفعلية الحالية
+## البنية
 
 ```
-app/                 Next.js App Router (صفحات + Route Handlers)
-  login/page.tsx      شاشة الدخول (Client Component، supabase.auth.signInWithPassword)
-  page.tsx            الصفحة الرئيسية → <AppShell/>
-  api/admin/teachers/  Route Handlers الوحيدة في المشروع (تحتاج service_role لإنشاء مستخدم Auth)
-components/           AppShell + أقسام الواجهة (Dashboard, Students, Daily, Tilawah, Edu, Report, Manage)
-lib/                  أنواع مشتركة (types.ts)، requireAdmin.ts، lib/supabase/database.types.ts
-utils/supabase/       client.ts (متصفح), server.ts (Server Components), middleware.ts, admin.ts (سيرفر فقط)
-middleware.ts         يحدّث الجلسة ويحوّل غير المسجّلين لـ /login على كل طلب
+app/                    Next.js App Router
+  login/page.tsx         الدخول برمز OTP على البريد (shouldCreateUser: false)
+  page.tsx               → <AppShell/>
+  api/admin/teachers/    Route Handlers الوحيدة (تحتاج service_role لإنشاء حساب Auth)
+components/
+  AppShell.tsx           التنقل: الطلاب · التلقين · التقارير · الإدارة (للمدير) + شارة المزامنة
+  StudentCard.tsx        بطاقة الطالب: الحضور، موقعه في كل مسار، وأقسام المسارات
+  card/                  أقسام البطاقة (Quran tracks، العربية، التربية)
+  sections/              Students (البحث والإضافة)، Talqeen، Reports، Manage
+lib/
+  offline/idb.ts         غلاف IndexedDB
+  offline/store.ts       طبقة البيانات المحلية: outbox + حلقة المزامنة (push ثم pull)
+  quran.ts               حسابات المصحف (فهرس الآيات، الطول، التحقق، التغطية)
+  progress.ts            "الموقع الحالي" لكل طالب، يُحسب محليًا
+  arabic.ts              مطابقة الأسماء العربية (همزات، تاء مربوطة، ألف مقصورة...)
+public/sw.js             service worker لواجهة التطبيق (يفتح بدون إنترنت)
+supabase/migrations/     ملفات SQL لكل تعديل على قاعدة البيانات منذ 2026-10-07
 ```
 
-**لا يوجد Backend API عام يطبّق الصلاحيات بالكود** كما كان مخطّطًا أول الأمر — بدلًا من ذلك:
-كل استعلام بيانات (طلاب، حلقات، سجلات يومية، تلاوة، ملاحظات تربوية) يذهب **مباشرة من المتصفح إلى
-Supabase (PostgREST)**، والحماية بالكامل عبر **Row Level Security policies حقيقية** في قاعدة
-البيانات (راجع "الأمان" أدناه). الاستثناء الوحيد: إنشاء حساب محفظ جديد، لأنه يحتاج صلاحية
-Supabase Auth Admin API التي لا يمكن استدعاؤها من المتصفح أبدًا — لهذا فقط يوجد Route Handler
-واحد (`app/api/admin/teachers/`) يعمل بمفتاح `service_role` على الخادم.
+**القراءة والكتابة كلها محلية أولًا.** الواجهة تقرأ من نسخة محلية (IndexedDB)، وكل تعديل يُكتب
+محليًا ويُضاف إلى outbox. حلقة المزامنة ترسل الـ outbox إلى Supabase (upsert مفتاحه UUID يُولَّد على
+الجهاز، فإعادة الإرسال لا تكرّر شيئًا)، ثم تسحب ما تغيّر منذ آخر سحب (`updated_at`). المزامنة تعمل
+عند فتح التطبيق، وعند عودة الاتصال، وعند العودة للتطبيق، وكل دقيقة. الحماية الفعلية كلها في
+**RLS** داخل قاعدة البيانات.
 
-قاعدة البيانات: PostgreSQL مستضافة على Supabase (مشروع `quran-halaqat-tracker`، المنطقة
-`eu-central-1`، project ref `nmjxwhuuyhuxgstiijlt`). المستخدمون عبر **Supabase Auth** (بريد
-إلكتروني + كلمة مرور)، وبيانات الدور/الحالة في جدول `profiles` المرتبط بـ `auth.users`.
+## قاعدة البيانات
+
+Supabase (مشروع `quran-halaqat-tracker`، `eu-central-1`، ref `nmjxwhuuyhuxgstiijlt`).
+
+| الجدول | الغرض |
+|---|---|
+| `profiles` | الدور (`ADMIN` / `TEACHER`) والحالة لكل مستخدم Auth |
+| `circles` | الحلقة = اسم نصي حر فريد + `active`. ينشئها المدير فقط |
+| `students` | حلقة واحدة لكل طالب + `active` (الأرشفة للمدير فقط) |
+| `quran_entries` | الحفظ/التلاوة/المراجعة/التلقين. النطاق قد يمتد عبر عدة سور |
+| `attendance` | صف واحد لكل (طالب، يوم) |
+| `talqeen_sessions` | جلسة تلقين لحلقة؛ تُنشئ إدخال TALQEEN لكل طالب معلَّم |
+| `arabic_books`, `student_arabic_enrollments`, `arabic_entries` | مسار العربية بالصفحات |
+| `edu_notes` | مسار التربية (عمود `points` مخفي حتى تصميم التقييم) |
+| `deprecated_v1_daily_records`, `deprecated_v1_tilawah_records` | الجداول القديمة، مؤرشفة للقراءة فقط |
+
+أعمدة المزامنة في كل جدول قابل للمزامنة: `updated_at` (يضبطه trigger، ويُستخدم للسحب)،
+`updated_by`، `edited_at` (وقت التعديل على الجهاز؛ **آخر تعديل يفوز**)، و`deleted_at` (حذف ناعم).
+
+الدوال: `save_talqeen_session` (جلسة التلقين كاملة في transaction واحدة)، `report_data` (بيانات
+التقارير)، `sync_latest_quran_entries` و`sync_latest_arabic_entries` (للتنزيل الأول)، والـ view
+`student_progress`. كلها `security invoker` فتبقى RLS مطبّقة.
+
+**الـ migrations:** كل تعديل جديد يوضع في `supabase/migrations/` ويُطبّق على المشروع، ثم يُعاد
+توليد `lib/supabase/database.types.ts`. الـ migrations قبل 2026-10-07 (من `init_schema` إلى
+`auto_provision_self_signup_profile`) موجودة فقط في سجل المشروع على Supabase.
 
 ## التشغيل محليًا
 
 ```bash
 npm install
-cp .env.local.example .env.local   # القيم العامة معبّأة مسبقًا؛ اترك SUPABASE_SERVICE_ROLE_KEY فاضي إن لم تحتجه بعد
+cp .env.local.example .env.local   # اترك SUPABASE_SERVICE_ROLE_KEY فاضي إن لم تحتجه
 npm run dev
 ```
 
-المتغيرات في `.env.local`:
-- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: عامة، آمنة للتعريض في
-  المتصفح (هذا تصميم Supabase المقصود)، معبّأة مسبقًا في `.env.local.example`.
-- `SUPABASE_SERVICE_ROLE_KEY`: **سرّي، سيرفر فقط**. مطلوب فقط لميزة "إضافة محفظ" من صفحة الإدارة
-  و لإعادة تعيين كلمة مرور محفظ. بدونه، باقي التطبيق يعمل بشكل طبيعي وهذه الميزة فقط ترجع خطأ
-  واضح. احصل عليه من: Supabase Dashboard → Project Settings → API → `service_role` secret key.
-  **لا تضعه أبدًا في كود يصل المتصفح ولا في أي ملف يُرفع لـ Git.**
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: عامة، معبّأة مسبقًا.
+- `SUPABASE_SERVICE_ROLE_KEY`: **سرّي، للسيرفر فقط**. مطلوب لإضافة محفّظ ولإعادة تعيين كلمة المرور.
 
-## حساب المدير الأول
+الـ service worker يُسجَّل في نسخة الإنتاج فقط. لتجربة العمل بدون إنترنت: `npm run build && npm start`
+ثم افتح التطبيق مرة وأنت متصل، وبعدها فعّل وضع Offline من DevTools.
 
-لا توجد شاشة "تسجيل مستخدم جديد" (بالتصميم — فقط الأدمن يُنشئ حسابات). حساب مدير تجريبي أُنشئ
-فعليًا أثناء البناء وتم ربطه بـ `profiles` كـ `ADMIN`:
+## الحسابات والدخول
 
-- البريد: `osamazaedsefalden+admin@gmail.com`
-- كلمة المرور: عيّنها بنفسك من Supabase Dashboard → Authentication → Users → ابحث عن هذا
-  البريد → خيار تعيين/إعادة تعيين كلمة المرور مباشرة (إرسال إيميل تلقائي تجاوز الحد المجاني
-  وقت البناء، فالتعيين المباشر من اللوحة هو الأضمن).
+**لا يوجد تسجيل ذاتي.** فقط الحسابات التي أنشأها المدير تستطيع الدخول. من يدخل ببريد غير مسجّل
+يرى رسالة لطيفة ولا يُنشأ له حساب.
 
-لإنشاء أي مدير/محفظ إضافي لاحقًا: من صفحة "⚙️ الإدارة" داخل التطبيق (يتطلب `SUPABASE_SERVICE_ROLE_KEY`
-مضبوطًا)، أو يدويًا عبر Supabase Dashboard ثم إضافة صف في جدول `profiles` بنفس الـ `id`.
+> ⚠️ **ضروري:** أوقف خيار **Allow new users to sign up** من
+> Supabase → Authentication → Sign In / Providers. خيار `shouldCreateUser: false` موجود في كود
+> صفحة الدخول فقط، وأي أحد يستطيع استدعاء API الخاص بـ Supabase مباشرة. مفتاح اللوحة هو الذي يمنع
+> ذلك فعليًا. إضافة المحفّظين من شاشة الإدارة تبقى تعمل لأنها تستخدم مفتاح `service_role`.
+
+**المدير** هو صف في جدول `profiles` بقيمة `role = 'ADMIN'`، وليس متغيّر بيئة (RLS داخل Postgres لا
+ترى متغيّرات Netlify). المدراء الحاليون: `osamazaedsefalden@gmail.com` و`osamazaedsefalden+admin@gmail.com`.
+
+**إعداد أول مدير (مرة واحدة):** أنشئ المستخدم من Supabase → Authentication → Users → *Add user*
+(مع تفعيل "auto confirm")، ثم شغّل في SQL Editor:
+
+```sql
+insert into public.profiles (id, name, role, active)
+select id, 'Admin name', 'ADMIN', true from auth.users where email = 'admin@example.com'
+on conflict (id) do update set role = 'ADMIN', active = true;
+```
+
+بعدها يستطيع أي مدير ترقية محفّظ إلى مدير من شاشة «⚙️ الإدارة» دون الحاجة للوحة Supabase.
+
+## الصلاحيات
+
+| | المدير | المحفّظ |
+|---|---|---|
+| عرض كل الحلقات والطلاب | ✓ | ✓ |
+| إضافة طالب وتعديله ونقله لحلقة أخرى | ✓ | ✓ |
+| إضافة/تعديل/حذف الإدخالات على كل المسارات | ✓ | ✓ |
+| جلسات التلقين والتقارير | ✓ | ✓ |
+| إنشاء الحلقات وتسميتها وأرشفتها | ✓ | ✗ |
+| أرشفة الطلاب | ✓ | ✗ |
+| المحفّظون (إضافة، تعطيل، كلمة مرور، ترقية لمدير) | ✓ | ✗ |
+| كتب العربية | ✓ | ✗ |
+
+الحساب المعطّل لا يرى أي بيانات (RLS عبر `private.is_staff()`).
+
+## العمل بدون إنترنت
+
+- يجب **تثبيت التطبيق على الشاشة الرئيسية** (التطبيق يعرض التعليمات). على iOS هذا يقلل احتمال أن
+  يمسح النظام البيانات المحفوظة، والتطبيق يطلب `navigator.storage.persist()`.
+- أول دخول يحتاج إنترنت، وكذلك الدخول بعد انتهاء الجلسة تمامًا. التعديلات المحفوظة تبقى على الجهاز
+  وتُرسل بعد تسجيل الدخول من جديد.
+- الجهاز يحتفظ بآخر **60 يومًا** من الإدخالات، وكل إدخالات الحفظ، وآخر إدخال لكل طالب في كل مسار.
+  السجل الأقدم يُحمَّل من البطاقة عند الاتصال («تحميل السجل الأقدم»).
+- شارة المزامنة في الأعلى تعرض: كل شيء متزامن، أو عدد التغييرات المنتظرة، أو عدد التي فشلت مع سببها
+  (إعادة المحاولة أو التجاهل). لا يضيع أي تغيير بصمت.
+- تسجيل الخروج يمسح البيانات المحلية، ويحذّر أولًا إن كانت هناك تغييرات لم تُرسل.
+- iOS لا يدعم Background Sync: المزامنة تحدث فقط والتطبيق مفتوح.
+- بدون اتصال لا تعمل: إدارة المحفّظين، وإنشاء الحلقات والكتب، وتقارير الفترات الكاملة. تقرير اليوم
+  يُعرض من بيانات الجهاز مع تنبيه أنه قد يكون ناقصًا.
 
 ## البناء والنشر (Netlify)
 
 ```bash
 npm run build
-npm start        # تشغيل محلي للنسخة الإنتاجية
+npm start
 ```
 
-النشر على **Netlify** مضبوط عبر `netlify.toml` (يتعرّف Netlify على Next.js تلقائيًا، لا يلزم plugin).
-كل `git push` على فرع `main` يعمل deploy تلقائيًا بعد ربط المستودع من لوحة Netlify
-(Add new project → Import from GitHub).
+النشر عبر `netlify.toml`، وكل `git push` على `main` ينشر تلقائيًا. متغيرات البيئة:
+`NEXT_PUBLIC_SUPABASE_URL`، `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`، و`SUPABASE_SERVICE_ROLE_KEY`
+(سرّي). بعد أول نشر اضبط Site URL وRedirect URLs في Supabase (التفاصيل في `EMAIL_SETUP.md`).
 
-**متغيرات البيئة** (Netlify → Site configuration → Environment variables):
+## خارج النطاق حاليًا
 
-| المتغير | ملاحظة |
-|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | عام |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | عام |
-| `SUPABASE_SERVICE_ROLE_KEY` | **سرّي** — فعّل خيار *Contains secret values*؛ لا يوضع في الكود ولا في Git |
-
-**بعد أول نشر** اضبط في Supabase → Authentication → URL Configuration: **Site URL** = رابط موقع
-Netlify، وأضف `https://<موقعك>/**` إلى **Redirect URLs** (وإلا ستحوّل روابط استعادة كلمة المرور
-إلى عنوان خاطئ). التفاصيل الكاملة في `EMAIL_SETUP.md`.
-
-التطبيق **تطبيق ويب** فقط (متجاوب مع الهاتف)، وقابل للتثبيت من المتصفح كـ PWA عبر
-`app/manifest.ts` — لا يوجد تطبيق أندرويد/iOS أصلي.
-
-## الأمان (مهم)
-
-- **كل الصلاحيات مطبّقة داخل قاعدة البيانات (RLS)، وليس في كود التطبيق** — حتى لو استُدعي
-  Supabase مباشرة من أي مكان (console المتصفح مثلًا)، النتيجة نفسها محكومة بنفس القواعد. الدوال
-  المساعدة (`is_admin`, `can_access_circle`, `can_access_student`...) موجودة في schema منفصل
-  اسمه `private` غير معرَّض عبر REST API، بحيث ما حدا يقدر يستدعيها مباشرة، فقط RLS policies
-  وTriggers تستخدمها داخليًا.
-- نقاط التقييم اليومي (`daily_records.points`) **تُحسب دائمًا بواسطة Trigger في قاعدة البيانات**
-  (`compute_daily_points`)، وليس بالمتصفح — حتى لو تلاعب أحد بالـ payload المُرسَل، القيمة
-  المخزَّنة الفعلية محسوبة من `attendance/grade/work_type/adjustment` بمنطق ثابت من السيرفر.
-- التحقق من صحة أرقام آيات التلاوة (لا تتجاوز عدد آيات السورة) يتم أيضًا بـ Trigger
-  (`validate_tilawah`) قبل أي إدراج، وليس فقط في الواجهة.
-- تعطيل محفظ (`profiles.active = false`) يقطع وصوله **فورًا** لكل البيانات عبر RLS، حتى لو كانت
-  جلسته (JWT) لسا صالحة تقنيًا — تم اختباره فعليًا (راجع تفاصيل الاختبار أدناه).
-- كل الجداول عليها RLS مفعّل صراحة، وتم فحصها بأداة الأمان الخاصة بـ Supabase (`get_advisors`)
-  بعد كل تعديل بنيوي وصفّرت كل التحذيرات ذات الدلالة.
-- لا شيء يُخزَّن بـ localStorage — كل شيء يمر عبر جلسة Supabase Auth (كوكيز httpOnly تديرها
-  مكتبة `@supabase/ssr`) و RLS.
-
-### تم اختباره فعليًا (وليس افتراضًا)
-
-أثناء البناء تم إنشاء حسابي اختبار مؤقتين (مدير ومحفظ) واختبار: تسجيل دخول حقيقي، عزل الصلاحيات
-(محفظ لا يرى طلاب حلقة غير حلقته ولا يقدر يُدرج لهم سجلات — 403 فعليًا)، صحة حساب النقاط تلقائيًا
-(تحقّق رقمي مطابق)، تحديث موضع الطالب تلقائيًا بعد حفظ جديد، رفض رقم آية خارج نطاق السورة، رفض
-نقاط تربوية خارج النطاق المسموح، وقطع الوصول الفوري عند تعطيل محفظ. كل الحسابات والبيانات
-التجريبية حُذفت بعد الاختبار — القاعدة الآن فاضية إلا من حساب المدير الحقيقي المذكور أعلاه.
-
-## القيود المعروفة / أفكار للتوسع لاحقًا
-
-- ميزة "Leaked Password Protection" (فحص كلمات المرور المسرّبة عبر HaveIBeenPwned) غير مفعّلة —
-  إعداد على مستوى مشروع Supabase (Authentication → Policies)، يُفضَّل تفعيله يدويًا من اللوحة.
-- الحلقة تُسنَد لمحفظ رئيسي واحد فقط (قرار تصميمي موثّق في `PROJECT_ANALYSIS.md`). دعم عدة
-  محفظين لحلقة واحدة يتطلب جدول ربط إضافي إن احتجته مستقبلًا.
-- لا توجد شاشة "تغيير كلمة المرور الشخصية" لمستخدم مسجّل دخول (فقط الأدمن يقدر يغيّر كلمة مرور
-  محفظ عبر Route Handler الإدارة). يمكن إضافتها بسهولة عبر `supabase.auth.updateUser()`.
-- الجداول الست القديمة من نسخة Express (`deprecated_*`) لا تزال موجودة بقاعدة البيانات (فاضية،
-  RLS مفعّل بلا policies = ممنوع الوصول كليًا) — لم تُحذف نهائيًا بعد لأن الحذف يحتاج تأكيدًا
-  صريحًا إضافيًا؛ يمكن حذفها بأمان في أي وقت لاحق.
+- **التقييم والدرجات** لكل مسار. النقاط والنتيجة الشهرية القديمة مخفية، وعمود `quality` محفوظ في
+  كل إدخال حتى يُحسب التقييم لاحقًا من البيانات الموجودة.
+- "Leaked Password Protection" غير مفعّل (Authentication → Policies في لوحة Supabase).
