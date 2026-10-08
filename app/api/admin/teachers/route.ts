@@ -5,6 +5,32 @@ import { createAdminClient } from "@/utils/supabase/admin";
 // Creating a teacher account requires the Supabase Auth Admin API (service_role), which the
 // browser can never call directly — this is the one legitimate reason this app has a
 // traditional server route instead of a direct client -> Postgres call.
+// Login emails live in auth.users, which only the Auth Admin API can read: the admin screen uses
+// this to show and pre-fill each account's email.
+export async function GET() {
+  const admin = await requireAdmin();
+  if (!admin.ok) return NextResponse.json({ error: admin.error }, { status: admin.status });
+
+  let adminClient;
+  try {
+    adminClient = createAdminClient();
+  } catch {
+    return NextResponse.json(
+      { error: "SUPABASE_SERVICE_ROLE_KEY غير مضبوط على الخادم — راجع .env.local.example" },
+      { status: 500 }
+    );
+  }
+
+  const emails: Record<string, string> = {};
+  for (let page = 1; ; page++) {
+    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    for (const u of data.users) if (u.email) emails[u.id] = u.email;
+    if (data.users.length < 1000) break;
+  }
+  return NextResponse.json({ emails });
+}
+
 export async function POST(request: Request) {
   const admin = await requireAdmin();
   if (!admin.ok) return NextResponse.json({ error: admin.error }, { status: admin.status });

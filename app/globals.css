@@ -275,3 +275,4 @@ button:active{transform:scale(.97)}
 .insight-list li:last-child{border-bottom:0}
 .insight-list li:hover{background:#f6faf8}
 .medal{display:inline-block;width:22px}
+.edit-row td{background:#f6faf8}

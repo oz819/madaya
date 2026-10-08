@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useApp } from "@/components/AppContext";
 import { store, useStore } from "@/lib/offline/store";
 
@@ -10,8 +10,8 @@ export default function Manage() {
   return (
     <section>
       <div className="card notice">
-        صلاحيات المدير: إدارة المحفّظين والمدراء، إنشاء الحلقات وتسميتها وأرشفتها، أرشفة الطلاب، وإدارة كتب العربية. كل محفّظ
-        مفعّل يرى جميع الطلاب ويضيف ويعدّل إدخالاتهم. هذه الإجراءات تحتاج اتصالًا بالإنترنت.
+        صلاحيات المدير: إدارة المحفّظين والمدراء، إنشاء الحلقات وتسميتها وأرشفتها، أرشفة الطلاب، وإدارة كتب العربية. كل محفّظ مفعّل يرى جميع
+        الطلاب ويضيف ويعدّل إدخالاتهم. هذه الإجراءات تحتاج اتصالًا بالإنترنت.
       </div>
       <Teachers />
       <Halaqat />
@@ -28,7 +28,23 @@ function Teachers() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [emails, setEmails] = useState<Record<string, string>>({});
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
   const people = s.all("profiles").sort((a, b) => a.name.localeCompare(b.name, "ar"));
+
+  async function loadEmails() {
+    try {
+      const res = await fetch("/api/admin/teachers");
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) setEmails(data.emails ?? {});
+    } catch {}
+  }
+
+  useEffect(() => {
+    loadEmails();
+  }, []);
 
   async function refresh() {
     const { data } = await supabase.from("profiles").select("id,name,role,active");
@@ -66,6 +82,54 @@ function Teachers() {
     showToast(msg);
   }
 
+  function startEdit(id: string, currentName: string) {
+    setError("");
+    setEditId(id);
+    setEditName(currentName);
+    setEditEmail(emails[id] ?? "");
+  }
+
+  async function saveEdit(id: string, currentName: string) {
+    const patch: { name?: string; email?: string } = {};
+    if (editName.trim() !== currentName) patch.name = editName.trim();
+    if (editEmail.trim() && editEmail.trim() !== (emails[id] ?? "")) patch.email = editEmail.trim();
+    if (!patch.name && !patch.email) return setEditId(null);
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/admin/teachers/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return setError(data.error || "تعذّر حفظ التعديل");
+      setEditId(null);
+      await Promise.all([refresh(), loadEmails()]);
+      showToast("تم حفظ التعديل");
+    } catch {
+      setError("تحتاج اتصالًا بالإنترنت");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(id: string, personName: string) {
+    if (!confirm(`حذف حساب ${personName} نهائيًا؟ لا يمكن التراجع عن الحذف.`)) return;
+    setError("");
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/admin/teachers/${id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return setError(data.error || "تعذّر حذف الحساب");
+      await store.removeLocal("profiles", id);
+      showToast("تم حذف الحساب");
+    } catch {
+      setError("تحتاج اتصالًا بالإنترنت");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function resetPassword(id: string) {
     const pw = prompt("كلمة المرور الجديدة (8 أحرف على الأقل):");
     if (!pw) return;
@@ -97,6 +161,7 @@ function Teachers() {
           <thead>
             <tr>
               <th>الاسم</th>
+              <th>البريد</th>
               <th>الدور</th>
               <th>الحالة</th>
               <th></th>
@@ -104,38 +169,80 @@ function Teachers() {
           </thead>
           <tbody>
             {people.map((p) => (
-              <tr key={p.id}>
-                <td>{p.name}</td>
-                <td>{p.role === "ADMIN" ? "مدير" : "محفّظ"}</td>
-                <td>{p.active ? "مفعّل" : "معطّل"}</td>
-                <td className="row-actions">
-                  {p.id !== profile.id && (
-                    <>
-                      <button className="link" onClick={() => update(p.id, { active: !p.active }, p.active ? "تم التعطيل" : "تم التفعيل")}>
-                        {p.active ? "تعطيل" : "تفعيل"}
+              <Fragment key={p.id}>
+                <tr>
+                  <td>{p.name}</td>
+                  <td className="small" dir="ltr" style={{ textAlign: "right" }}>
+                    {emails[p.id] ?? "—"}
+                  </td>
+                  <td>{p.role === "ADMIN" ? "مدير" : "محفّظ"}</td>
+                  <td>{p.active ? "مفعّل" : "معطّل"}</td>
+                  <td className="row-actions">
+                    {p.id !== profile.id && (
+                      <>
+                        <button
+                          className="link"
+                          onClick={() => update(p.id, { active: !p.active }, p.active ? "تم التعطيل" : "تم التفعيل")}
+                        >
+                          {p.active ? "تعطيل" : "تفعيل"}
+                        </button>
+                        {p.role === "TEACHER" ? (
+                          <button
+                            className="link"
+                            onClick={() => confirm(`ترقية ${p.name} إلى مدير؟`) && update(p.id, { role: "ADMIN" }, "تمت الترقية إلى مدير")}
+                          >
+                            ترقية لمدير
+                          </button>
+                        ) : (
+                          <button
+                            className="link"
+                            onClick={() =>
+                              confirm(`إرجاع ${p.name} إلى محفّظ؟`) && update(p.id, { role: "TEACHER" }, "تم التحويل إلى محفّظ")
+                            }
+                          >
+                            إلغاء الإدارة
+                          </button>
+                        )}
+                      </>
+                    )}
+                    <button className="link" onClick={() => startEdit(p.id, p.name)}>
+                      تعديل
+                    </button>
+                    <button className="link" onClick={() => resetPassword(p.id)}>
+                      كلمة المرور
+                    </button>
+                    {p.id !== profile.id && (
+                      <button className="link danger-link" disabled={busy} onClick={() => remove(p.id, p.name)}>
+                        حذف
                       </button>
-                      {p.role === "TEACHER" ? (
-                        <button
-                          className="link"
-                          onClick={() => confirm(`ترقية ${p.name} إلى مدير؟`) && update(p.id, { role: "ADMIN" }, "تمت الترقية إلى مدير")}
-                        >
-                          ترقية لمدير
-                        </button>
-                      ) : (
-                        <button
-                          className="link"
-                          onClick={() => confirm(`إرجاع ${p.name} إلى محفّظ؟`) && update(p.id, { role: "TEACHER" }, "تم التحويل إلى محفّظ")}
-                        >
-                          إلغاء الإدارة
-                        </button>
-                      )}
-                    </>
-                  )}
-                  <button className="link" onClick={() => resetPassword(p.id)}>
-                    كلمة المرور
-                  </button>
-                </td>
-              </tr>
+                    )}
+                  </td>
+                </tr>
+                {editId === p.id && (
+                  <tr className="edit-row">
+                    <td colSpan={5}>
+                      <div className="formgrid compact">
+                        <div>
+                          <label>الاسم</label>
+                          <input value={editName} onChange={(e) => setEditName(e.target.value)} />
+                        </div>
+                        <div>
+                          <label>البريد الإلكتروني (للدخول)</label>
+                          <input type="email" dir="ltr" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
+                        </div>
+                        <div className="row-actions" style={{ alignSelf: "end" }}>
+                          <button disabled={busy || !editName.trim()} onClick={() => saveEdit(p.id, p.name)}>
+                            حفظ
+                          </button>
+                          <button className="secondary" onClick={() => setEditId(null)}>
+                            إلغاء
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -261,7 +368,14 @@ function ArabicBooks() {
       <h3>📘 كتب العربية</h3>
       <div className="formgrid compact">
         <input placeholder="عنوان الكتاب (مثال: القراءة الراشدة ج1)" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <input placeholder="عدد الصفحات" type="number" inputMode="numeric" min={1} value={pages} onChange={(e) => setPages(e.target.value)} />
+        <input
+          placeholder="عدد الصفحات"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          value={pages}
+          onChange={(e) => setPages(e.target.value)}
+        />
         <button onClick={add}>إضافة كتاب</button>
       </div>
       {error && <p className="error-text">{error}</p>}

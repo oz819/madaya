@@ -482,6 +482,13 @@ class LocalStore {
     this.emit();
   }
 
+  /** Drops a row that no longer exists on the server (e.g. a deleted staff account). */
+  async removeLocal<T extends TableName>(table: T, key: string) {
+    this.data[table].delete(key);
+    await idb.deleteRow(table, key);
+    this.emit();
+  }
+
   // ---------- outbox management ----------
 
   async retry(seq: number) {
