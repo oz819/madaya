@@ -157,14 +157,14 @@ export default function AppShell() {
         <div className="headerrow">
           <div className="brand-row">
             <Image className="header-logo" src="/images/logo.png" alt="" width={46} height={46} />
-            <div>
+            <div className="brand-text">
               <h1>حلقات القرآن</h1>
-              <p className="dates">
-                <span>
+              <div className="dates">
+                <span className="hijri">
                   {greeting()} · {hijriToday()}
                 </span>
                 <span className="gregorian">{gregorianToday()}</span>
-              </p>
+              </div>
             </div>
           </div>
           <div className="userbox">
