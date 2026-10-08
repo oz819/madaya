@@ -276,3 +276,38 @@ button:active{transform:scale(.97)}
 .insight-list li:hover{background:#f6faf8}
 .medal{display:inline-block;width:22px}
 .edit-row td{background:#f6faf8}
+
+/* ---- Header dates (Hijri + Gregorian). The header now scrolls away and only the tabs stay
+   pinned, so a taller header can never slide under them. ---- */
+header{position:relative}
+nav{top:0}
+header p.dates{display:flex;flex-direction:column;gap:2px;line-height:1.5}
+header p.dates .gregorian{opacity:.8;font-size:11px}
+@media(max-width:650px){nav{top:0}header p.dates{display:flex;font-size:11px}header p.dates .gregorian{font-size:10.5px}}
+
+/* ---- Confirm dialog ---- */
+.dialog-overlay{position:fixed;inset:0;z-index:200;background:rgba(5,20,15,.55);display:grid;place-items:center;padding:16px;animation:fade-in .15s ease-out}
+.dialog{background:#fff;border-radius:16px;max-width:440px;width:100%;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.35);border-top:5px solid var(--g);animation:pop-in .18s ease-out}
+.dialog.danger{border-top-color:var(--red)}
+.dialog h4{margin:0 0 8px;font-size:17px;color:var(--g2);font-family:var(--font-reem-kufi),Tahoma,sans-serif}
+.dialog.danger h4{color:var(--red)}
+.dialog p{margin:0 0 16px;line-height:1.8;font-size:14px;color:#3b4b50;white-space:pre-line}
+@keyframes fade-in{from{opacity:0}}
+@keyframes pop-in{from{opacity:0;transform:translateY(8px) scale(.98)}}
+@media(prefers-reduced-motion:reduce){.dialog-overlay,.dialog{animation:none}}
+
+/* ---- Trash ---- */
+.trash-table td{vertical-align:middle}
+.trash-empty{padding:28px 0;font-size:14px}
+.badge.kind-profile{background:#efe7fb;color:#5b3a8c}
+.badge.kind-student{background:#e8f3ee;color:#1d6b55}
+.badge.kind-circle{background:#edf3ff;color:#2d568e}
+.badge.kind-arabic_book,.badge.kind-arabic_entry{background:#fdeee9;color:#a5452c}
+.badge.kind-quran_entry,.badge.kind-talqeen_session{background:#fff7df;color:#89650e}
+.badge.kind-edu_note{background:#eef1f4;color:#45535e}
+/* The old phone rule hides every table's 5th column; these tables keep their actions there. */
+@media(max-width:650px){
+  .trash-table th:nth-child(5),.trash-table td:nth-child(5),.staff-table th:nth-child(5),.staff-table td:nth-child(5){display:table-cell}
+  .trash-table th:nth-child(4),.trash-table td:nth-child(4),.staff-table th:nth-child(2),.staff-table td:nth-child(2){display:none}
+  .trash-table td.row-actions,.staff-table td.row-actions{flex-direction:column;align-items:flex-start}
+}

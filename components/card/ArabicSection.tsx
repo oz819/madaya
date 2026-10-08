@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useApp } from "@/components/AppContext";
+import { confirmDialog } from "@/components/ConfirmDialog";
 import { store, newId, useStore } from "@/lib/offline/store";
 import { byNewest } from "@/lib/progress";
 import { QUALITIES, todayStr, type ArabicEnrollment, type ArabicEntry } from "@/lib/types";
@@ -98,7 +99,14 @@ export default function ArabicSection({
   }
 
   async function remove(e: ArabicEntry) {
-    if (!confirm("حذف هذا الإدخال؟")) return;
+    const who = s.get("students", studentId)?.name ?? "";
+    const ok = await confirmDialog({
+      title: `حذف درس العربية «${who}»؟`,
+      body: `${e.entry_date} · ${s.get("arabic_books", e.book_id)?.title ?? ""} ص${e.from_page}–${e.to_page}\n` + "ينتقل إلى سجل المحذوفات، ويستطيع المدير استرجاعه من هناك.",
+      ok: "حذف",
+      danger: true,
+    });
+    if (!ok) return;
     await store.softDelete("arabic_entries", e.id, "حذف درس عربية");
   }
 

@@ -3,3 +3,5 @@ export const NOT_REGISTERED_MESSAGE =
   "أهلًا بك! هذا البريد الإلكتروني غير مسجّل لدينا بعد. يُرجى التواصل مع مسؤول الحلقات ليضيفك، ثم حاول مرة أخرى.";
 
 export const ACCOUNT_DISABLED_MESSAGE = "هذا الحساب معطّل حاليًا. تواصل مع مسؤول الحلقات.";
+
+export const ACCOUNT_DELETED_MESSAGE = "هذا الحساب محذوف ولا يمكنه الدخول. تواصل مع مسؤول الحلقات.";

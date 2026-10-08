@@ -114,7 +114,7 @@ export default function Reports() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, pFrom, pTo, scope, circleId, studentId]);
 
-  const books = new Map(s.all("arabic_books").map((b) => [b.id, b]));
+  const books = s.lookup("arabic_books");
   const filtered: ReportData | null = data && {
     quran: data.quran.filter((e) => studentIds.has(e.student_id)),
     arabic: data.arabic.filter((e) => studentIds.has(e.student_id)),

@@ -8,18 +8,20 @@ import type { Profile, Role } from "@/lib/types";
 import { Mushaf } from "@/lib/quran";
 import { store, useStore } from "@/lib/offline/store";
 import { getMeta, setMeta } from "@/lib/offline/idb";
-import { ACCOUNT_DISABLED_MESSAGE, NOT_REGISTERED_MESSAGE } from "@/lib/messages";
+import { ACCOUNT_DELETED_MESSAGE, ACCOUNT_DISABLED_MESSAGE, NOT_REGISTERED_MESSAGE } from "@/lib/messages";
 import { AppContext } from "@/components/AppContext";
 import Students from "@/components/sections/Students";
 import Talqeen from "@/components/sections/Talqeen";
 import Reports from "@/components/sections/Reports";
 import Manage from "@/components/sections/Manage";
+import Trash from "@/components/sections/Trash";
+import ConfirmDialogHost from "@/components/ConfirmDialog";
 import SyncBadge from "@/components/SyncBadge";
 import SlidingIndicator from "@/components/SlidingIndicator";
 import InstallHint from "@/components/InstallHint";
 import Toast, { useToast } from "@/components/Toast";
 
-type Page = "students" | "talqeen" | "reports" | "manage";
+type Page = "students" | "talqeen" | "reports" | "manage" | "trash";
 
 const NAV: { id: Page; label: string }[] = [
   { id: "students", label: "👨‍🎓 الطلاب" },
@@ -56,14 +58,18 @@ export default function AppShell() {
 
       let p: Profile | null = cached?.userId === userId ? cached.profile : null;
       if (navigator.onLine) {
-        const { data, error } = await supabase.from("profiles").select("id,name,role,active").eq("id", userId).maybeSingle();
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id,name,role,active,deleted_at")
+          .eq("id", userId)
+          .maybeSingle();
         if (!error) {
-          if (!data || !data.active || (data.role !== "ADMIN" && data.role !== "TEACHER")) {
-            setBlockedMessage(!data ? NOT_REGISTERED_MESSAGE : ACCOUNT_DISABLED_MESSAGE);
+          if (!data || data.deleted_at || !data.active || (data.role !== "ADMIN" && data.role !== "TEACHER")) {
+            setBlockedMessage(!data ? NOT_REGISTERED_MESSAGE : data.deleted_at ? ACCOUNT_DELETED_MESSAGE : ACCOUNT_DISABLED_MESSAGE);
             await supabase.auth.signOut();
             return;
           }
-          p = { ...data, role: data.role as Role };
+          p = { id: data.id, name: data.name, role: data.role as Role, active: data.active };
         }
       }
       if (!p) {
@@ -87,6 +93,18 @@ export default function AppShell() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Deleted or disabled while the app is open: the next sync brings the change, then sign out.
+  const own = profile ? s.get("profiles", profile.id) : undefined;
+  const revoked = !!own && (!!own.deleted_at || !own.active);
+  useEffect(() => {
+    if (!revoked) return;
+    setBlockedMessage(own?.deleted_at ? ACCOUNT_DELETED_MESSAGE : ACCOUNT_DISABLED_MESSAGE);
+    setProfile(null);
+    store.stop();
+    supabase.auth.signOut();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revoked]);
 
   const surahs = s.all("quran_surahs");
   const mushaf = useMemo(() => new Mushaf(surahs), [surahs]);
@@ -141,8 +159,11 @@ export default function AppShell() {
             <Image className="header-logo" src="/images/logo.png" alt="" width={46} height={46} />
             <div>
               <h1>حلقات القرآن</h1>
-              <p>
-                {greeting()} · {hijriToday()}
+              <p className="dates">
+                <span>
+                  {greeting()} · {hijriToday()}
+                </span>
+                <span className="gregorian">{gregorianToday()}</span>
               </p>
             </div>
           </div>
@@ -166,9 +187,14 @@ export default function AppShell() {
           </button>
         ))}
         {profile.role === "ADMIN" && (
-          <button className={page === "manage" ? "active" : ""} onClick={() => setPage("manage")}>
-            ⚙️ الإدارة
-          </button>
+          <>
+            <button className={page === "manage" ? "active" : ""} onClick={() => setPage("manage")}>
+              ⚙️ الإدارة
+            </button>
+            <button className={page === "trash" ? "active" : ""} onClick={() => setPage("trash")}>
+              🗑️ سجل المحذوفات
+            </button>
+          </>
         )}
       </nav>
 
@@ -180,11 +206,25 @@ export default function AppShell() {
         {page === "talqeen" && <Talqeen />}
         {page === "reports" && <Reports />}
         {page === "manage" && profile.role === "ADMIN" && <Manage />}
+        {page === "trash" && profile.role === "ADMIN" && <Trash />}
       </main>
 
       <Toast text={toast} />
+      <ConfirmDialogHost />
     </AppContext.Provider>
   );
+}
+
+// e.g. "الخميس، ٨ تشرين الأول ٢٠٢٦ م" — ar-SY gives the Levantine month names.
+function gregorianToday(): string {
+  try {
+    return (
+      new Intl.DateTimeFormat("ar-SY", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date()) +
+      " م"
+    );
+  } catch {
+    return "";
+  }
 }
 
 function greeting(): string {

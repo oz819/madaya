@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useApp } from "@/components/AppContext";
+import { confirmDialog } from "@/components/ConfirmDialog";
 import RangePicker from "@/components/RangePicker";
 import { store, newId, useStore } from "@/lib/offline/store";
 import type { QuranRange } from "@/lib/quran";
@@ -84,7 +85,13 @@ export default function Talqeen() {
   }
 
   async function removeSession(t: TalqeenSession) {
-    if (!confirm("حذف جلسة التلقين وإدخالاتها؟")) return;
+    const ok = await confirmDialog({
+      title: `حذف جلسة التلقين «${s.get("circles", t.circle_id)?.name ?? ""}» بتاريخ ${t.session_date}؟`,
+      body: `${mushaf.formatRange({ from: { surah: t.from_surah_no, ayah: t.from_ayah }, to: { surah: t.to_surah_no, ayah: t.to_ayah } })} — تُحذف معها إدخالات التلقين للطلاب.\n` + "ينتقل إلى سجل المحذوفات، ويستطيع المدير استرجاعه من هناك.",
+      ok: "حذف",
+      danger: true,
+    });
+    if (!ok) return;
     await store.saveTalqeen({ ...t, deleted_at: new Date().toISOString() }, []);
     if (sessionId === t.id) resetForm();
     showToast("تم حذف الجلسة");

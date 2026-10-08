@@ -2,17 +2,6 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/requireAdmin";
 import { createAdminClient } from "@/utils/supabase/admin";
 
-// Every table whose teacher_id references profiles without ON DELETE (incl. the two legacy v1 tables).
-const RECORD_TABLES = [
-  "quran_entries",
-  "attendance",
-  "arabic_entries",
-  "edu_notes",
-  "talqeen_sessions",
-  "deprecated_v1_daily_records",
-  "deprecated_v1_tilawah_records",
-] as const;
-
 function adminClientOrError() {
   try {
     return { client: createAdminClient() };
@@ -48,47 +37,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (name !== undefined) {
     const { error } = await client.from("profiles").update({ name }).eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  }
-  return NextResponse.json({ ok: true });
-}
-
-// Permanently delete a staff account. Records keep a non-cascading reference to their teacher
-// (and the database pins teacher_id on update), so an account that has recorded anything can't be
-// deleted without losing who recorded it — those are refused with a count and should be disabled.
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const admin = await requireAdmin();
-  if (!admin.ok) return NextResponse.json({ error: admin.error }, { status: admin.status });
-
-  const { id } = await params;
-  if (id === admin.userId) return NextResponse.json({ error: "لا يمكنك حذف حسابك أنت" }, { status: 400 });
-
-  const { client, error: cfgError } = adminClientOrError();
-  if (!client) return cfgError;
-
-  let records = 0;
-  for (const table of RECORD_TABLES) {
-    const { count, error } = await client.from(table).select("*", { count: "exact", head: true }).eq("teacher_id", id);
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-    records += count ?? 0;
-  }
-  if (records > 0) {
-    return NextResponse.json(
-      {
-        error: `لا يمكن حذف هذا الحساب لأن له ${records} سجلًا محفوظًا باسمه (تسميع/حضور/ملاحظات). الحذف كان سيُفقد معرفة من سجّلها — استخدم «تعطيل» بدلًا منه، فيبقى السجل ولا يستطيع الدخول.`,
-        records,
-      },
-      { status: 409 },
-    );
-  }
-
-  // Deleting the auth user cascades to its profiles row.
-  const { error } = await client.auth.admin.deleteUser(id);
-  if (error) {
-    // A record added between the count and the delete still trips the foreign key: same advice.
-    return NextResponse.json(
-      { error: `تعذّر حذف الحساب (${error.message}). إن كان له سجلات فاستخدم «تعطيل» بدلًا من الحذف.` },
-      { status: 400 }
-    );
   }
   return NextResponse.json({ ok: true });
 }

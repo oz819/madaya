@@ -21,6 +21,8 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           edited_at: string
           id: string
           title: string
@@ -31,6 +33,8 @@ export type Database = {
         Insert: {
           active?: boolean
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           edited_at?: string
           id?: string
           title: string
@@ -41,6 +45,8 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           edited_at?: string
           id?: string
           title?: string
@@ -55,6 +61,7 @@ export type Database = {
           book_id: string
           created_at: string
           deleted_at: string | null
+          deleted_by: string | null
           edited_at: string
           entry_date: string
           from_page: number
@@ -71,6 +78,7 @@ export type Database = {
           book_id: string
           created_at?: string
           deleted_at?: string | null
+          deleted_by?: string | null
           edited_at?: string
           entry_date?: string
           from_page: number
@@ -87,6 +95,7 @@ export type Database = {
           book_id?: string
           created_at?: string
           deleted_at?: string | null
+          deleted_by?: string | null
           edited_at?: string
           entry_date?: string
           from_page?: number
@@ -192,6 +201,8 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           edited_at: string
           id: string
           name: string
@@ -201,6 +212,8 @@ export type Database = {
         Insert: {
           active?: boolean
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           edited_at?: string
           id?: string
           name: string
@@ -210,6 +223,8 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           edited_at?: string
           id?: string
           name?: string
@@ -638,13 +653,14 @@ export type Database = {
           area: string
           created_at: string
           deleted_at: string | null
+          deleted_by: string | null
           edited_at: string
           id: string
           note: string
           points: number
           record_date: string
           student_id: string
-          teacher_id: string
+          teacher_id: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -652,13 +668,14 @@ export type Database = {
           area: string
           created_at?: string
           deleted_at?: string | null
+          deleted_by?: string | null
           edited_at?: string
           id?: string
           note: string
           points?: number
           record_date?: string
           student_id: string
-          teacher_id: string
+          teacher_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -666,13 +683,14 @@ export type Database = {
           area?: string
           created_at?: string
           deleted_at?: string | null
+          deleted_by?: string | null
           edited_at?: string
           id?: string
           note?: string
           points?: number
           record_date?: string
           student_id?: string
-          teacher_id?: string
+          teacher_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -704,6 +722,8 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           id: string
           name: string
           role: string
@@ -711,6 +731,8 @@ export type Database = {
         Insert: {
           active?: boolean
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           id: string
           name: string
           role: string
@@ -718,6 +740,8 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           name?: string
           role?: string
@@ -728,6 +752,7 @@ export type Database = {
         Row: {
           created_at: string
           deleted_at: string | null
+          deleted_by: string | null
           edited_at: string
           entry_date: string
           from_ayah: number | null
@@ -747,6 +772,7 @@ export type Database = {
         Insert: {
           created_at?: string
           deleted_at?: string | null
+          deleted_by?: string | null
           edited_at?: string
           entry_date?: string
           from_ayah?: number | null
@@ -766,6 +792,7 @@ export type Database = {
         Update: {
           created_at?: string
           deleted_at?: string | null
+          deleted_by?: string | null
           edited_at?: string
           entry_date?: string
           from_ayah?: number | null
@@ -911,6 +938,8 @@ export type Database = {
           active: boolean
           circle_id: string
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           edited_at: string
           id: string
           name: string
@@ -921,6 +950,8 @@ export type Database = {
           active?: boolean
           circle_id: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           edited_at?: string
           id?: string
           name: string
@@ -931,6 +962,8 @@ export type Database = {
           active?: boolean
           circle_id?: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           edited_at?: string
           id?: string
           name?: string
@@ -952,6 +985,7 @@ export type Database = {
           circle_id: string
           created_at: string
           deleted_at: string | null
+          deleted_by: string | null
           edited_at: string
           from_ayah: number
           from_surah_no: number
@@ -968,6 +1002,7 @@ export type Database = {
           circle_id: string
           created_at?: string
           deleted_at?: string | null
+          deleted_by?: string | null
           edited_at?: string
           from_ayah: number
           from_surah_no: number
@@ -984,6 +1019,7 @@ export type Database = {
           circle_id?: string
           created_at?: string
           deleted_at?: string | null
+          deleted_by?: string | null
           edited_at?: string
           from_ayah?: number
           from_surah_no?: number
@@ -1117,6 +1153,29 @@ export type Database = {
       }
     }
     Functions: {
+      admin_purge: {
+        Args: { p_id: string; p_kind: string }
+        Returns: undefined
+      }
+      admin_restore: {
+        Args: { p_id: string; p_kind: string }
+        Returns: undefined
+      }
+      admin_soft_delete: {
+        Args: { p_id: string; p_kind: string }
+        Returns: undefined
+      }
+      admin_trash: {
+        Args: never
+        Returns: {
+          deleted_at: string
+          deleted_by_name: string
+          detail: string
+          id: string
+          kind: string
+          label: string
+        }[]
+      }
       ayahs_before: { Args: { p_surah_no: number }; Returns: number }
       report_data: {
         Args: {

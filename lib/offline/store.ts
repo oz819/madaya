@@ -24,7 +24,7 @@ import type {
 import { addDays, todayStr } from "@/lib/types";
 import * as idb from "@/lib/offline/idb";
 
-export type ProfileRow = { id: string; name: string; role: string; active: boolean };
+export type ProfileRow = { id: string; name: string; role: string; active: boolean; deleted_at: string | null };
 
 type TableRows = {
   circles: Circle;
@@ -72,7 +72,11 @@ const SYNC_TABLES = [
 ] as const;
 
 // Server-managed columns are never sent: triggers set them (spec §9).
-const SERVER_MANAGED = new Set(["updated_at", "updated_by", "created_at", "teacher_id"]);
+const SERVER_MANAGED = new Set(["updated_at", "updated_by", "created_at", "teacher_id", "deleted_by"]);
+
+// Soft-deleted rows of these tables stay in the local copy (so a restore is just another update)
+// but are hidden from every list: all() skips them. get() still finds them, e.g. for old names.
+const SOFT_DELETE_HIDDEN = new Set<TableName>(["students", "circles", "arabic_books", "profiles"]);
 
 /** Devices keep this many days of entries locally (plus all HIFZ and each student's latest per track). */
 export const LOCAL_WINDOW_DAYS = 60;
@@ -265,7 +269,10 @@ class LocalStore {
   // ---------- reads ----------
 
   all<T extends TableName>(table: T): TableRows[T][] {
-    return this.memo(`all:${table}`, () => Array.from(this.data[table].values()));
+    return this.memo(`all:${table}`, () => {
+      const rows = Array.from(this.data[table].values());
+      return SOFT_DELETE_HIDDEN.has(table) ? rows.filter((r) => !(r as { deleted_at?: string | null }).deleted_at) : rows;
+    });
   }
 
   get<T extends TableName>(table: T, key: string): TableRows[T] | undefined {
@@ -273,6 +280,11 @@ class LocalStore {
   }
 
   /** Live (non-deleted) rows of a table grouped by student_id. */
+  /** Every row including soft-deleted ones, keyed for lookups (names of deleted books in history). */
+  lookup<T extends TableName>(table: T): Map<string, TableRows[T]> {
+    return this.memo(`lookup:${table}`, () => new Map(this.data[table]));
+  }
+
   byStudent<T extends "quran_entries" | "arabic_entries" | "edu_notes" | "attendance" | "student_arabic_enrollments">(
     table: T
   ): Map<string, TableRows[T][]> {
@@ -479,13 +491,6 @@ class LocalStore {
       records.push({ table, key, row: r as Record<string, unknown> });
     }
     await idb.putRows(records);
-    this.emit();
-  }
-
-  /** Drops a row that no longer exists on the server (e.g. a deleted staff account). */
-  async removeLocal<T extends TableName>(table: T, key: string) {
-    this.data[table].delete(key);
-    await idb.deleteRow(table, key);
     this.emit();
   }
 
@@ -702,7 +707,7 @@ class LocalStore {
       await merge("quran_surahs", data ?? []);
     }
     {
-      const { data, error } = await sb.from("profiles").select("id,name,role,active");
+      const { data, error } = await sb.from("profiles").select("id,name,role,active,deleted_at");
       if (error) throw new Error(error.message);
       const ids = new Set((data ?? []).map((p) => p.id));
       for (const k of Array.from(this.data.profiles.keys())) {

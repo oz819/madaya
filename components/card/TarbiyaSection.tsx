@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useApp } from "@/components/AppContext";
+import { confirmDialog } from "@/components/ConfirmDialog";
 import { store, newId } from "@/lib/offline/store";
 import { byNewest } from "@/lib/progress";
 import { EDU_AREAS, todayStr, type EduNote } from "@/lib/types";
@@ -35,7 +36,14 @@ export default function TarbiyaSection({ studentId, notes }: { studentId: string
   }
 
   async function remove(n: EduNote) {
-    if (!confirm("حذف هذه الملاحظة؟")) return;
+    const who = store.get("students", studentId)?.name ?? "";
+    const ok = await confirmDialog({
+      title: `حذف الملاحظة التربوية «${n.area}» لـ ${who}؟`,
+      body: `${n.record_date} · ${n.note}\n` + "ينتقل إلى سجل المحذوفات، ويستطيع المدير استرجاعه من هناك.",
+      ok: "حذف",
+      danger: true,
+    });
+    if (!ok) return;
     await store.softDelete("edu_notes", n.id, "حذف ملاحظة تربوية");
   }
 

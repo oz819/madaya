@@ -2,6 +2,8 @@
 
 import { Fragment, useEffect, useState } from "react";
 import { useApp } from "@/components/AppContext";
+import { confirmDialog } from "@/components/ConfirmDialog";
+import { adminSoftDelete } from "@/lib/adminDelete";
 import { store, useStore } from "@/lib/offline/store";
 
 // Admin-only actions (spec §5.4). These need a connection: they write straight to Supabase
@@ -47,7 +49,7 @@ function Teachers() {
   }, []);
 
   async function refresh() {
-    const { data } = await supabase.from("profiles").select("id,name,role,active");
+    const { data } = await supabase.from("profiles").select("id,name,role,active,deleted_at");
     if (data) await store.applyRemote("profiles", data);
   }
 
@@ -95,14 +97,23 @@ function Teachers() {
     if (editEmail.trim() && editEmail.trim() !== (emails[id] ?? "")) patch.email = editEmail.trim();
     if (!patch.name && !patch.email) return setEditId(null);
     setBusy(true);
+    setError("");
     try {
-      const res = await fetch(`/api/admin/teachers/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) return setError(data.error || "تعذّر حفظ التعديل");
+      // The name is a plain profiles update (RLS: admins only); only the login email needs the
+      // server route, because changing it goes through the Auth Admin API.
+      if (patch.name) {
+        const { error } = await supabase.from("profiles").update({ name: patch.name }).eq("id", id);
+        if (error) return setError(error.message);
+      }
+      if (patch.email) {
+        const res = await fetch(`/api/admin/teachers/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: patch.email }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) return setError(data.error || "تعذّر تغيير البريد");
+      }
       setEditId(null);
       await Promise.all([refresh(), loadEmails()]);
       showToast("تم حفظ التعديل");
@@ -114,20 +125,20 @@ function Teachers() {
   }
 
   async function remove(id: string, personName: string) {
-    if (!confirm(`حذف حساب ${personName} نهائيًا؟ لا يمكن التراجع عن الحذف.`)) return;
+    const ok = await confirmDialog({
+      title: `حذف حساب «${personName}»؟`,
+      body: "ينتقل إلى سجل المحذوفات ولن يستطيع تسجيل الدخول. يمكنك استرجاعه من هناك، وتبقى كل سجلاته.",
+      ok: "حذف",
+      danger: true,
+    });
+    if (!ok) return;
     setError("");
     setBusy(true);
-    try {
-      const res = await fetch(`/api/admin/teachers/${id}`, { method: "DELETE" });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) return setError(data.error || "تعذّر حذف الحساب");
-      await store.removeLocal("profiles", id);
-      showToast("تم حذف الحساب");
-    } catch {
-      setError("تحتاج اتصالًا بالإنترنت");
-    } finally {
-      setBusy(false);
-    }
+    const err = await adminSoftDelete(supabase, "profile", id);
+    setBusy(false);
+    if (err) return setError(err);
+    if (editId === id) setEditId(null);
+    showToast(`تم حذف «${personName}» — تجده في سجل المحذوفات`);
   }
 
   async function resetPassword(id: string) {
@@ -157,7 +168,7 @@ function Teachers() {
       <p className="small muted">يدخل المحفّظ بعدها برمز يصله على بريده. لا يستطيع أحد غير مسجّل هنا إنشاء حساب بنفسه.</p>
       {error && <p className="error-text">{error}</p>}
       <div style={{ overflow: "auto" }}>
-        <table>
+        <table className="staff-table">
           <thead>
             <tr>
               <th>الاسم</th>
@@ -260,7 +271,7 @@ function Halaqat() {
   const count = (id: string) => s.all("students").filter((st) => st.active && st.circle_id === id).length;
 
   function friendly(msg: string) {
-    return /circles_name_unique|duplicate/i.test(msg) ? "يوجد حلقة بهذا الاسم" : msg;
+    return /circles_name_unique|duplicate/i.test(msg) ? "يوجد حلقة بهذا الاسم (ربما في سجل المحذوفات — استرجعها من هناك)" : msg;
   }
 
   async function add() {
@@ -284,6 +295,20 @@ function Halaqat() {
     if (error) return setError(friendly(error.message));
     await store.applyRemote("circles", [data]);
     showToast("تم الحفظ");
+  }
+
+  async function remove(id: string, circleName: string) {
+    const ok = await confirmDialog({
+      title: `حذف الحلقة «${circleName}»؟`,
+      body: "تنتقل إلى سجل المحذوفات وتختفي من كل القوائم. يمكنك استرجاعها من هناك.",
+      ok: "حذف",
+      danger: true,
+    });
+    if (!ok) return;
+    setError("");
+    const err = await adminSoftDelete(supabase, "circle", id);
+    if (err) return setError(err);
+    showToast(`تم حذف «${circleName}»`);
   }
 
   return (
@@ -323,6 +348,9 @@ function Halaqat() {
                 <button className="link" onClick={() => update(c.id, { active: !c.active })}>
                   {c.active ? "أرشفة" : "استعادة"}
                 </button>
+                <button className="link danger-link" onClick={() => remove(c.id, c.name)}>
+                  حذف
+                </button>
               </td>
             </tr>
           ))}
@@ -345,7 +373,8 @@ function ArabicBooks() {
     const total = Number(pages);
     if (!title.trim() || !Number.isInteger(total) || total < 1) return setError("أدخل العنوان وعدد الصفحات");
     const { data, error } = await supabase.from("arabic_books").insert({ title: title.trim(), total_pages: total }).select().single();
-    if (error) return setError(/unique|duplicate/i.test(error.message) ? "يوجد كتاب بهذا العنوان" : error.message);
+    if (error)
+      return setError(/unique|duplicate/i.test(error.message) ? "يوجد كتاب بهذا العنوان (ربما في سجل المحذوفات)" : error.message);
     await store.applyRemote("arabic_books", [data]);
     setTitle("");
     setPages("");
@@ -361,6 +390,20 @@ function ArabicBooks() {
       .single();
     if (error) return setError(error.message);
     await store.applyRemote("arabic_books", [data]);
+  }
+
+  async function remove(id: string, bookTitle: string) {
+    const ok = await confirmDialog({
+      title: `حذف الكتاب «${bookTitle}»؟`,
+      body: "ينتقل إلى سجل المحذوفات ويختفي من القوائم. دروس الطلاب السابقة فيه تبقى.",
+      ok: "حذف",
+      danger: true,
+    });
+    if (!ok) return;
+    setError("");
+    const err = await adminSoftDelete(supabase, "arabic_book", id);
+    if (err) return setError(err);
+    showToast(`تم حذف «${bookTitle}»`);
   }
 
   return (
@@ -393,9 +436,12 @@ function ArabicBooks() {
               <tr key={b.id} className={b.active ? "" : "muted"}>
                 <td>{b.title}</td>
                 <td>{b.total_pages}</td>
-                <td>
+                <td className="row-actions">
                   <button className="link" onClick={() => toggle(b.id, !b.active)}>
                     {b.active ? "أرشفة" : "استعادة"}
+                  </button>
+                  <button className="link danger-link" onClick={() => remove(b.id, b.title)}>
+                    حذف
                   </button>
                 </td>
               </tr>

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useApp } from "@/components/AppContext";
+import { confirmDialog } from "@/components/ConfirmDialog";
+import { adminSoftDelete } from "@/lib/adminDelete";
 import QuranTrackSection from "@/components/card/QuranTrackSection";
 import ArabicSection from "@/components/card/ArabicSection";
 import TarbiyaSection from "@/components/card/TarbiyaSection";
@@ -49,7 +51,7 @@ export default function StudentCard({ studentId, onClose }: { studentId: string;
   const edu = s.byStudent("edu_notes").get(studentId) ?? [];
   const enrollments = s.byStudent("student_arabic_enrollments").get(studentId) ?? [];
   const att = s.get("attendance", `${studentId}|${today}`);
-  const books = new Map(s.all("arabic_books").map((b) => [b.id, b]));
+  const books = s.lookup("arabic_books");
   const p = studentProgress({ mushaf, quran, arabic, enrollments, books, edu, attendanceToday: att });
   const unsynced = s.unsyncedStudents().has(studentId);
   const circle = s.get("circles", student.circle_id);
@@ -86,7 +88,9 @@ export default function StudentCard({ studentId, onClose }: { studentId: string;
           </button>
         </div>
 
-        {editing && <EditStudent studentId={studentId} isAdmin={profile.role === "ADMIN"} onDone={() => setEditing(false)} />}
+        {editing && (
+          <EditStudent studentId={studentId} isAdmin={profile.role === "ADMIN"} onDone={() => setEditing(false)} onDeleted={onClose} />
+        )}
 
         <div className="att-row">
           <span className="muted">حضور اليوم:</span>
@@ -206,7 +210,13 @@ function TalqeenList({ entries }: { entries: QuranEntry[] }) {
             <button
               className="link danger-link"
               onClick={async () => {
-                if (confirm("حذف هذا الإدخال؟")) await store.softDelete("quran_entries", e.id, "حذف تلقين");
+                const ok = await confirmDialog({
+                  title: `حذف التلقين «${store.get("students", e.student_id)?.name ?? ""}»؟`,
+                  body: `${e.entry_date} · ${mushaf.formatRange(entryRange(e))}\n` + "ينتقل إلى سجل المحذوفات، ويستطيع المدير استرجاعه من هناك.",
+                  ok: "حذف",
+                  danger: true,
+                });
+                if (ok) await store.softDelete("quran_entries", e.id, "حذف تلقين");
               }}
             >
               حذف
@@ -218,9 +228,19 @@ function TalqeenList({ entries }: { entries: QuranEntry[] }) {
   );
 }
 
-function EditStudent({ studentId, isAdmin, onDone }: { studentId: string; isAdmin: boolean; onDone: () => void }) {
+function EditStudent({
+  studentId,
+  isAdmin,
+  onDone,
+  onDeleted,
+}: {
+  studentId: string;
+  isAdmin: boolean;
+  onDone: () => void;
+  onDeleted: () => void;
+}) {
   const s = useStore();
-  const { showToast } = useApp();
+  const { supabase, showToast } = useApp();
   const student = s.get("students", studentId)!;
   const [name, setName] = useState(student.name);
   const [circleId, setCircleId] = useState(student.circle_id);
@@ -237,6 +257,20 @@ function EditStudent({ studentId, isAdmin, onDone }: { studentId: string; isAdmi
     if (!confirm(student.active ? "أرشفة هذا الطالب؟" : "إلغاء أرشفة الطالب؟")) return;
     await store.save("students", { ...student, active: !student.active }, student.active ? "أرشفة طالب" : "إلغاء أرشفة طالب");
     onDone();
+  }
+
+  async function remove() {
+    const ok = await confirmDialog({
+      title: `حذف الطالب «${student.name}»؟`,
+      body: "ينتقل إلى سجل المحذوفات ويختفي من كل القوائم والتقارير. تبقى سجلاته كاملة، ويمكن استرجاعه من سجل المحذوفات.",
+      ok: "حذف",
+      danger: true,
+    });
+    if (!ok) return;
+    const err = await adminSoftDelete(supabase, "student", student.id);
+    if (err) return showToast(err);
+    showToast(`تم حذف «${student.name}» — تجده في سجل المحذوفات`);
+    onDeleted();
   }
 
   return (
@@ -260,6 +294,11 @@ function EditStudent({ studentId, isAdmin, onDone }: { studentId: string; isAdmi
         {isAdmin && (
           <button className="secondary" onClick={toggleArchive}>
             {student.active ? "أرشفة" : "إلغاء الأرشفة"}
+          </button>
+        )}
+        {isAdmin && (
+          <button className="danger" onClick={remove}>
+            حذف
           </button>
         )}
       </div>

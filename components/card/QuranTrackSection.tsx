@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useApp } from "@/components/AppContext";
+import { confirmDialog } from "@/components/ConfirmDialog";
 import RangePicker from "@/components/RangePicker";
 import { entryRange, type Mushaf, type QuranRange } from "@/lib/quran";
 import { byNewest, latestOfTrack } from "@/lib/progress";
@@ -84,7 +85,14 @@ export default function QuranTrackSection({
   }
 
   async function remove(e: QuranEntry) {
-    if (!confirm("حذف هذا الإدخال؟")) return;
+    const who = store.get("students", studentId)?.name ?? "";
+    const ok = await confirmDialog({
+      title: `حذف ${TRACK_LABEL[track]} «${who}»؟`,
+      body: `${e.entry_date} · ${mushaf.formatRange(entryRange(e))}\n` + "ينتقل إلى سجل المحذوفات، ويستطيع المدير استرجاعه من هناك.",
+      ok: "حذف",
+      danger: true,
+    });
+    if (!ok) return;
     await store.softDelete("quran_entries", e.id, `حذف ${TRACK_LABEL[track]}`);
     if (editingId === e.id) reset();
     showToast("تم الحذف");
