@@ -5,6 +5,7 @@ import { useApp } from "@/components/AppContext";
 import QuranTrackSection from "@/components/card/QuranTrackSection";
 import ArabicSection from "@/components/card/ArabicSection";
 import TarbiyaSection from "@/components/card/TarbiyaSection";
+import SlidingIndicator from "@/components/SlidingIndicator";
 import { store, useStore } from "@/lib/offline/store";
 import { byNewest, studentProgress } from "@/lib/progress";
 import { entryRange } from "@/lib/quran";
@@ -110,7 +111,8 @@ export default function StudentCard({ studentId, onClose }: { studentId: string;
         </div>
       </div>
 
-      <div className="tabs">
+      <div className="tabs sliding">
+        <SlidingIndicator active={section} />
         {SECTIONS.map((sec) => (
           <button key={sec.id} className={section === sec.id ? "active" : ""} onClick={() => setSection(sec.id)}>
             {sec.label}

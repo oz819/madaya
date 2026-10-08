@@ -14,6 +14,7 @@ import Talqeen from "@/components/sections/Talqeen";
 import Reports from "@/components/sections/Reports";
 import Manage from "@/components/sections/Manage";
 import SyncBadge from "@/components/SyncBadge";
+import SlidingIndicator from "@/components/SlidingIndicator";
 import InstallHint from "@/components/InstallHint";
 import Toast, { useToast } from "@/components/Toast";
 
@@ -151,7 +152,8 @@ export default function AppShell() {
         </div>
       </header>
 
-      <nav className="no-print">
+      <nav className="no-print sliding">
+        <SlidingIndicator active={page} />
         {NAV.map((n) => (
           <button key={n.id} className={page === n.id ? "active" : ""} onClick={() => setPage(n.id)}>
             {n.label}

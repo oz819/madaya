@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useApp } from "@/components/AppContext";
+import ProgressRing from "@/components/ProgressRing";
 import { LOCAL_WINDOW_DAYS, useStore } from "@/lib/offline/store";
 import { entryRange, type Mushaf, type QuranRange } from "@/lib/quran";
 import {
@@ -259,6 +260,7 @@ export default function Reports() {
             </button>
           </div>
         </div>
+        {filtered && <SummaryRings data={filtered} studentCount={students.length} />}
         {loading && !data ? (
           <p className="muted">جارٍ التحميل...</p>
         ) : timeline ? (
@@ -446,4 +448,19 @@ function buildWhatsApp(rows: Row[], tracks: { id: TrackKey; label: string }[], s
     if (tracks.every((t) => r.cells[t.id]?.empty ?? true)) out += ": لم يُسجَّل";
   }
   return out;
+}
+
+// At-a-glance percentages for the selected scope/period, shown above the detailed table.
+function SummaryRings({ data, studentCount }: { data: ReportData; studentCount: number }) {
+  const attended = data.attendance.filter((a) => a.status === "PRESENT" || a.status === "LATE").length;
+  const reciters = new Set(data.quran.map((e) => e.student_id)).size;
+  const graded = data.quran.filter((e) => e.quality);
+  const strong = graded.filter((e) => e.quality === "ممتاز" || e.quality === "جيد جدًا").length;
+  return (
+    <div className="rings">
+      <ProgressRing label="نسبة الحضور" value={attended} total={data.attendance.length} />
+      <ProgressRing label="طلاب سمّعوا" value={reciters} total={studentCount} color="var(--blue)" />
+      <ProgressRing label="ممتاز / جيد جدًا" value={strong} total={graded.length} color="var(--gold)" />
+    </div>
+  );
 }
