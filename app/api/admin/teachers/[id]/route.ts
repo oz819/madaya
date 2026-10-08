@@ -2,7 +2,16 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/requireAdmin";
 import { createAdminClient } from "@/utils/supabase/admin";
 
-const RECORD_TABLES = ["quran_entries", "attendance", "arabic_entries", "edu_notes", "talqeen_sessions"] as const;
+// Every table whose teacher_id references profiles without ON DELETE (incl. the two legacy v1 tables).
+const RECORD_TABLES = [
+  "quran_entries",
+  "attendance",
+  "arabic_entries",
+  "edu_notes",
+  "talqeen_sessions",
+  "deprecated_v1_daily_records",
+  "deprecated_v1_tilawah_records",
+] as const;
 
 function adminClientOrError() {
   try {
@@ -74,6 +83,12 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
   // Deleting the auth user cascades to its profiles row.
   const { error } = await client.auth.admin.deleteUser(id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    // A record added between the count and the delete still trips the foreign key: same advice.
+    return NextResponse.json(
+      { error: `تعذّر حذف الحساب (${error.message}). إن كان له سجلات فاستخدم «تعطيل» بدلًا من الحذف.` },
+      { status: 400 }
+    );
+  }
   return NextResponse.json({ ok: true });
 }
