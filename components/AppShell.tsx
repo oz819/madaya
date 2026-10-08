@@ -136,9 +136,15 @@ export default function AppShell() {
     <AppContext.Provider value={{ supabase, profile, mushaf, showToast }}>
       <header className="no-print">
         <div className="headerrow">
-          <div>
-            <h1>📖 حلقات القرآن</h1>
-            <p>الحفظ · التلاوة · المراجعة · التلقين · العربية · التربية</p>
+          <div className="brand-row">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="header-logo" src="/images/logo.png" alt="" width={46} height={46} />
+            <div>
+              <h1>حلقات القرآن</h1>
+              <p>
+                {greeting()} · {hijriToday()}
+              </p>
+            </div>
           </div>
           <div className="userbox">
             <span>
@@ -179,4 +185,18 @@ export default function AppShell() {
       <Toast text={toast} />
     </AppContext.Provider>
   );
+}
+
+function greeting(): string {
+  const h = new Date().getHours();
+  return h < 12 ? "صباح الخير" : "مساء الخير";
+}
+
+// Today's date in the Umm al-Qura Hijri calendar, e.g. "١٦ ربيع الآخر ١٤٤٨ هـ".
+function hijriToday(): string {
+  try {
+    return new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", { day: "numeric", month: "long", year: "numeric" }).format(new Date());
+  } catch {
+    return "";
+  }
 }

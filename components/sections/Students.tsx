@@ -29,6 +29,8 @@ export default function Students() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [recent, setRecent] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);
+  const [rollCall, setRollCall] = useState(false);
+  const [pending, setPending] = useState<"all" | "noAtt" | "noRec">("all");
 
   useEffect(() => setRecent(readRecent()), []);
 
@@ -45,6 +47,10 @@ export default function Students() {
   if (openId) return <StudentCard studentId={openId} onClose={() => setOpenId(null)} />;
 
   const today = todayStr();
+  const attendedToday = (id: string) => {
+    const a = s.get("attendance", `${id}|${today}`);
+    return !!a && !a.deleted_at;
+  };
   const circles = s.all("circles").filter((c) => c.active).sort((a, b) => a.name.localeCompare(b.name, "ar"));
   const quranBy = s.byStudent("quran_entries");
   const unsynced = s.unsyncedStudents();
@@ -53,6 +59,13 @@ export default function Students() {
     .filter((st) => (showArchived ? !st.active : st.active))
     .filter((st) => circleId === "all" || st.circle_id === circleId)
     .filter((st) => matchesName(st.name, query))
+    .filter((st) =>
+      pending === "noAtt"
+        ? !attendedToday(st.id)
+        : pending === "noRec"
+          ? !(quranBy.get(st.id) ?? []).some((e) => e.entry_date === today && !e.deleted_at)
+          : true
+    )
     .sort((a, b) => a.name.localeCompare(b.name, "ar"));
 
   const active = s.all("students").filter((st) => st.active);
@@ -66,24 +79,28 @@ export default function Students() {
   return (
     <section>
       <div className="grid">
-        <div className="card stat">
-          <span className="muted">الطلاب</span>
-          <b>{active.length}</b>
-        </div>
-        <div className="card stat">
-          <span className="muted">حاضرون اليوم</span>
-          <b>{presentToday}</b>
-        </div>
-        <div className="card stat">
-          <span className="muted">سُجّل لهم اليوم</span>
-          <b>{recordedToday}</b>
-        </div>
+        <StatTile icon="👥" label="الطلاب" value={active.length} />
+        <StatTile icon="✅" label="حاضرون اليوم" value={presentToday} of={active.length} />
+        <StatTile icon="📖" label="سُجّل لهم اليوم" value={recordedToday} of={active.length} />
       </div>
+
+      {rollCall && (
+        <RollCall
+          circleId={circleId}
+          onClose={() => setRollCall(false)}
+          onDone={(n) => showToast(`تم تحضير ${n} طالب`)}
+        />
+      )}
 
       <div className="card">
         <div className="title">
           <h3>👨‍🎓 الطلاب</h3>
-          <button onClick={() => setAdding((a) => !a)}>{adding ? "إغلاق" : "+ إضافة طالب"}</button>
+          <div className="row-actions">
+            <button className="secondary" onClick={() => setRollCall((r) => !r)}>
+              {rollCall ? "إغلاق التحضير" : "📋 تحضير سريع"}
+            </button>
+            <button onClick={() => setAdding((a) => !a)}>{adding ? "إغلاق" : "+ إضافة طالب"}</button>
+          </div>
         </div>
         {adding && (
           <AddStudent
@@ -104,6 +121,20 @@ export default function Students() {
               </option>
             ))}
           </select>
+        </div>
+        <div className="recent">
+          <span className="muted">عرض:</span>
+          {(
+            [
+              ["all", "الكل"],
+              ["noAtt", "لم يُحضَّروا اليوم"],
+              ["noRec", "لم يُسمِّعوا اليوم"],
+            ] as const
+          ).map(([id, label]) => (
+            <button key={id} className={`chip ${pending === id ? "on" : ""}`} onClick={() => setPending(id)}>
+              {label}
+            </button>
+          ))}
         </div>
         {profile.role === "ADMIN" && (
           <label className="inline">
@@ -213,6 +244,106 @@ function AddStudent({ onAdded }: { onAdded: (id: string) => void }) {
         <button onClick={add}>حفظ الطالب</button>
       </div>
       {error && <p className="error-text">{error}</p>}
+    </div>
+  );
+}
+
+function StatTile({ icon, label, value, of }: { icon: string; label: string; value: number; of?: number }) {
+  const pct = of ? Math.round((value / of) * 100) : null;
+  return (
+    <div className="card stat stat-tile">
+      <span className="stat-icon" aria-hidden="true">
+        {icon}
+      </span>
+      <div>
+        <span className="muted">{label}</span>
+        <b>
+          {value}
+          {of !== undefined && <small> / {of}</small>}
+        </b>
+        {pct !== null && (
+          <div className="progress">
+            <i style={{ width: `${pct}%` }} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const ROLL_STATUSES: AttendanceStatus[] = ["PRESENT", "LATE", "EXCUSED", "ABSENT"];
+
+// Mark today's attendance for a whole circle on one screen instead of opening each student card.
+function RollCall({ circleId, onClose, onDone }: { circleId: string; onClose: () => void; onDone: (n: number) => void }) {
+  const s = useStore();
+  const today = todayStr();
+  const circles = s.all("circles").filter((c) => c.active).sort((a, b) => a.name.localeCompare(b.name, "ar"));
+  const [cid, setCid] = useState(circleId !== "all" ? circleId : (circles[0]?.id ?? ""));
+  const roster = s
+    .all("students")
+    .filter((st) => st.active && st.circle_id === cid)
+    .sort((a, b) => a.name.localeCompare(b.name, "ar"));
+  const statusOf = (id: string) => {
+    const a = s.get("attendance", `${id}|${today}`);
+    return a && !a.deleted_at ? (a.status as AttendanceStatus) : null;
+  };
+  const unmarked = roster.filter((st) => !statusOf(st.id));
+
+  async function allPresent() {
+    for (const st of unmarked) await store.setAttendance(st.id, today, "PRESENT");
+    onDone(unmarked.length);
+  }
+
+  return (
+    <div className="card rollcall">
+      <div className="title">
+        <h3>📋 تحضير اليوم</h3>
+        <button className="link" onClick={onClose}>
+          إغلاق
+        </button>
+      </div>
+      <div className="formgrid compact">
+        <div>
+          <label>الحلقة</label>
+          <select value={cid} onChange={(e) => setCid(e.target.value)}>
+            {circles.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div style={{ alignSelf: "end" }}>
+          <button onClick={allPresent} disabled={!unmarked.length}>
+            ✅ الباقون حاضرون ({unmarked.length})
+          </button>
+        </div>
+      </div>
+      {roster.length ? (
+        <ul className="roster">
+          {roster.map((st) => {
+            const cur = statusOf(st.id);
+            return (
+              <li key={st.id}>
+                <b>{st.name}</b>
+                <div className="att-row" style={{ margin: 0 }}>
+                  {ROLL_STATUSES.map((stt) => (
+                    <button
+                      key={stt}
+                      className={`chip ${cur === stt ? `on ${stt.toLowerCase()}` : ""}`}
+                      onClick={() => store.setAttendance(st.id, today, cur === stt ? null : stt)}
+                    >
+                      {ATTENDANCE_LABEL[stt]}
+                    </button>
+                  ))}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="muted">لا يوجد طلاب في هذه الحلقة.</p>
+      )}
     </div>
   );
 }
