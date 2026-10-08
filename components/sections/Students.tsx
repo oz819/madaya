@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useApp } from "@/components/AppContext";
 import StudentCard from "@/components/StudentCard";
 import { matchesName } from "@/lib/arabic";
 import { store, newId, useStore } from "@/lib/offline/store";
 import { latestOfTrack } from "@/lib/progress";
-import { entryRange } from "@/lib/quran";
-import { ATTENDANCE_LABEL, todayStr, type AttendanceStatus } from "@/lib/types";
+import { entryRange, type Mushaf, type QuranRange } from "@/lib/quran";
+import { ATTENDANCE_LABEL, todayStr, type Attendance, type AttendanceStatus, type QuranEntry, type Student } from "@/lib/types";
 
 const RECENT_KEY = "recentStudents";
 
@@ -24,6 +24,8 @@ export default function Students() {
   const s = useStore();
   const { mushaf, showToast, profile } = useApp();
   const [query, setQuery] = useState("");
+  // Typing stays responsive on long lists: the filtered list re-renders at lower priority.
+  const deferredQuery = useDeferredValue(query);
   const [circleId, setCircleId] = useState("all");
   const [showArchived, setShowArchived] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -58,7 +60,7 @@ export default function Students() {
     .all("students")
     .filter((st) => (showArchived ? !st.active : st.active))
     .filter((st) => circleId === "all" || st.circle_id === circleId)
-    .filter((st) => matchesName(st.name, query))
+    .filter((st) => matchesName(st.name, deferredQuery))
     .filter((st) =>
       pending === "noAtt"
         ? !attendedToday(st.id)
@@ -83,6 +85,8 @@ export default function Students() {
         <StatTile icon="✅" label="حاضرون اليوم" value={presentToday} of={active.length} />
         <StatTile icon="📖" label="سُجّل لهم اليوم" value={recordedToday} of={active.length} />
       </div>
+
+      <Insights students={active} open={open} />
 
       {rollCall && (
         <RollCall
@@ -346,4 +350,87 @@ function RollCall({ circleId, onClose, onDone }: { circleId: string; onClose: ()
       )}
     </div>
   );
+}
+
+const ABSENCE_STREAK = 3;
+
+// Two on-device insights from the locally synced window: students absent on their last few
+// recorded days, and this month's top memorizers by distinct ayahs.
+function Insights({ students, open }: { students: Student[]; open: (id: string) => void }) {
+  const s = useStore();
+  const { mushaf } = useApp();
+  const attBy = s.byStudent("attendance");
+  const quranBy = s.byStudent("quran_entries");
+  const month = todayStr().slice(0, 7);
+
+  const { absent, stars } = useMemo(
+    () => ({
+      absent: students
+        .map((st) => ({ st, n: absenceStreak(attBy.get(st.id)) }))
+        .filter((x) => x.n >= ABSENCE_STREAK)
+        .sort((a, b) => b.n - a.n),
+      stars: students
+        .map((st) => ({ st, ayahs: monthHifz(mushaf, quranBy.get(st.id), month) }))
+        .filter((x) => x.ayahs > 0)
+        .sort((a, b) => b.ayahs - a.ayahs)
+        .slice(0, 5),
+    }),
+    [students, attBy, quranBy, mushaf, month]
+  );
+
+  if (!absent.length && !stars.length) return null;
+  const medals = ["🥇", "🥈", "🥉"];
+
+  return (
+    <div className="insights">
+      {absent.length > 0 && (
+        <div className="card insight warn-card">
+          <h3>⚠️ يحتاجون متابعة</h3>
+          <p className="muted">غابوا آخر {ABSENCE_STREAK} أيام مسجّلة أو أكثر</p>
+          <ul className="insight-list">
+            {absent.map(({ st, n }) => (
+              <li key={st.id} onClick={() => open(st.id)}>
+                <span>{st.name}</span>
+                <span className="badge redo">{n} أيام</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {stars.length > 0 && (
+        <div className="card insight star-card">
+          <h3>🏆 نجوم الحفظ هذا الشهر</h3>
+          <p className="muted">بعدد الآيات المحفوظة</p>
+          <ul className="insight-list">
+            {stars.map(({ st, ayahs }, i) => (
+              <li key={st.id} onClick={() => open(st.id)}>
+                <span>
+                  <span className="medal">{medals[i] ?? `${i + 1}.`}</span> {st.name}
+                </span>
+                <span className="badge excellent">{ayahs} آية</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function absenceStreak(rows: Attendance[] | undefined): number {
+  const sorted = [...(rows ?? [])].sort((a, b) => b.att_date.localeCompare(a.att_date));
+  let n = 0;
+  for (const r of sorted) {
+    if (r.status !== "ABSENT") break;
+    n++;
+  }
+  return n;
+}
+
+function monthHifz(mushaf: Mushaf, entries: QuranEntry[] | undefined, month: string): number {
+  const ranges = (entries ?? [])
+    .filter((e) => e.track === "HIFZ" && e.entry_date.startsWith(month))
+    .map(entryRange)
+    .filter((r): r is QuranRange => !!r);
+  return ranges.length ? mushaf.coverage(ranges) : 0;
 }

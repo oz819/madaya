@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import type { Profile, Role } from "@/lib/types";
@@ -137,8 +138,7 @@ export default function AppShell() {
       <header className="no-print">
         <div className="headerrow">
           <div className="brand-row">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="header-logo" src="/images/logo.png" alt="" width={46} height={46} />
+            <Image className="header-logo" src="/images/logo.png" alt="" width={46} height={46} />
             <div>
               <h1>حلقات القرآن</h1>
               <p>
