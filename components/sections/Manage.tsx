@@ -409,8 +409,12 @@ function ArabicBooks() {
   return (
     <div className="card">
       <h3>📘 كتب العربية</h3>
+      <p className="small muted">
+        كل كتاب تضيفه هنا يظهر خيارًا عند إضافة طالب وفي قسم «العربية» داخل بطاقة الطالب. عدد الصفحات هو عدد صفحات النسخة
+        المستخدمة في المركز، ومنه يُحسب تقدّم الطالب.
+      </p>
       <div className="formgrid compact">
-        <input placeholder="عنوان الكتاب (مثال: القراءة الراشدة ج1)" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <input placeholder="عنوان الكتاب (مثال: الرشيدي)" value={title} onChange={(e) => setTitle(e.target.value)} />
         <input
           placeholder="عدد الصفحات"
           type="number"

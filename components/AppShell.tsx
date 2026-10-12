@@ -31,12 +31,18 @@ const NAV: { id: Page; label: string }[] = [
 
 type CachedProfile = { userId: string; profile: Profile };
 
+// What's on screen. Each change is a browser history entry, so the phone's back button steps
+// back inside the app (student card → list → previous tab) instead of leaving it.
+type View = { page: Page; studentId: string | null };
+const HOME: View = { page: "students", studentId: null };
+
 export default function AppShell() {
   const router = useRouter();
   const [supabase] = useState(() => createClient());
   const [profile, setProfile] = useState<Profile | null>(null);
   const [blockedMessage, setBlockedMessage] = useState("");
-  const [page, setPage] = useState<Page>("students");
+  const [view, setView] = useState<View>(HOME);
+  const page = view.page;
   const { toast, showToast } = useToast();
   const s = useStore();
 
@@ -93,6 +99,30 @@ export default function AppShell() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const current = (history.state as { view?: View } | null)?.view;
+    if (current) setView(current);
+    else history.replaceState({ ...history.state, view: HOME }, "");
+    const onPop = (e: PopStateEvent) => setView((e.state as { view?: View } | null)?.view ?? HOME);
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  function go(next: View) {
+    if (next.page === view.page && next.studentId === view.studentId) return;
+    setView(next);
+    history.pushState({ view: next }, "");
+  }
+  const setPage = (p: Page) => go({ page: p, studentId: null });
+  function openStudent(id: string) {
+    go({ page: "students", studentId: id });
+  }
+  function closeStudent() {
+    // Opened from the list: undo that history entry so back/forward stay in step.
+    if ((history.state as { view?: View } | null)?.view?.studentId) history.back();
+    else setView({ ...view, studentId: null });
+  }
 
   // Deleted or disabled while the app is open: the next sync brings the change, then sign out.
   const own = profile ? s.get("profiles", profile.id) : undefined;
@@ -202,7 +232,7 @@ export default function AppShell() {
         <div className="no-print">
           <InstallHint />
         </div>
-        {page === "students" && <Students />}
+        {page === "students" && <Students openId={view.studentId} onOpen={openStudent} onClose={closeStudent} />}
         {page === "talqeen" && <Talqeen />}
         {page === "reports" && <Reports />}
         {page === "manage" && profile.role === "ADMIN" && <Manage />}

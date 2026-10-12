@@ -1,9 +1,10 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "@/components/AppContext";
 import StudentCard from "@/components/StudentCard";
 import { matchesName } from "@/lib/arabic";
+import { usePersistentState } from "@/lib/usePersistentState";
 import { store, newId, useStore } from "@/lib/offline/store";
 import { latestOfTrack } from "@/lib/progress";
 import { entryRange, type Mushaf, type QuranRange } from "@/lib/quran";
@@ -20,24 +21,39 @@ function readRecent(): string[] {
 }
 
 // The teacher's main screen (spec §5.1): call up whichever student is sitting in front of them.
-export default function Students() {
+export default function Students({
+  openId,
+  onOpen,
+  onClose,
+}: {
+  openId: string | null;
+  onOpen: (id: string) => void;
+  onClose: () => void;
+}) {
   const s = useStore();
   const { mushaf, showToast, profile } = useApp();
   const [query, setQuery] = useState("");
   // Typing stays responsive on long lists: the filtered list re-renders at lower priority.
   const deferredQuery = useDeferredValue(query);
-  const [circleId, setCircleId] = useState("all");
+  // Filters are remembered, so opening a student, switching tabs or reopening the app keeps them.
+  const [savedCircleId, setCircleId] = usePersistentState("students.circle", "all");
   const [showArchived, setShowArchived] = useState(false);
-  const [openId, setOpenId] = useState<string | null>(null);
   const [recent, setRecent] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);
   const [rollCall, setRollCall] = useState(false);
-  const [pending, setPending] = useState<"all" | "noAtt" | "noRec">("all");
+  const [pending, setPending] = usePersistentState<"all" | "noAtt" | "noRec">("students.pending", "all");
+  const listScroll = useRef(0);
 
   useEffect(() => setRecent(readRecent()), []);
 
+  // Back from a student card: return to the same place in the list.
+  useEffect(() => {
+    if (!openId && listScroll.current) window.scrollTo({ top: listScroll.current });
+  }, [openId]);
+
   function open(id: string) {
-    setOpenId(id);
+    listScroll.current = window.scrollY;
+    onOpen(id);
     const next = [id, ...recent.filter((r) => r !== id)].slice(0, 6);
     setRecent(next);
     try {
@@ -46,7 +62,7 @@ export default function Students() {
     window.scrollTo({ top: 0 });
   }
 
-  if (openId) return <StudentCard studentId={openId} onClose={() => setOpenId(null)} />;
+  if (openId) return <StudentCard studentId={openId} onClose={onClose} />;
 
   const today = todayStr();
   const attendedToday = (id: string) => {
@@ -54,6 +70,8 @@ export default function Students() {
     return !!a && !a.deleted_at;
   };
   const circles = s.all("circles").filter((c) => c.active).sort((a, b) => a.name.localeCompare(b.name, "ar"));
+  // A remembered circle that was since archived or deleted falls back to all circles.
+  const circleId = savedCircleId === "all" || circles.some((c) => c.id === savedCircleId) ? savedCircleId : "all";
   const quranBy = s.byStudent("quran_entries");
   const unsynced = s.unsyncedStudents();
   const students = s
@@ -108,6 +126,7 @@ export default function Students() {
         </div>
         {adding && (
           <AddStudent
+            defaultCircleId={circleId}
             onAdded={(id) => {
               setAdding(false);
               showToast("تمت إضافة الطالب");
@@ -192,12 +211,13 @@ export default function Students() {
   );
 }
 
-function AddStudent({ onAdded }: { onAdded: (id: string) => void }) {
+function AddStudent({ defaultCircleId, onAdded }: { defaultCircleId: string; onAdded: (id: string) => void }) {
   const s = useStore();
   const circles = s.all("circles").filter((c) => c.active);
   const books = s.all("arabic_books").filter((b) => b.active);
   const [name, setName] = useState("");
-  const [circleId, setCircleId] = useState(circles[0]?.id ?? "");
+  // Starts on the circle the list is filtered to, if any.
+  const [circleId, setCircleId] = useState(circles.some((c) => c.id === defaultCircleId) ? defaultCircleId : (circles[0]?.id ?? ""));
   const [bookId, setBookId] = useState("");
   const [error, setError] = useState("");
 

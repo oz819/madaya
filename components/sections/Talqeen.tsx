@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useApp } from "@/components/AppContext";
+import { usePersistentState } from "@/lib/usePersistentState";
 import { confirmDialog } from "@/components/ConfirmDialog";
 import RangePicker from "@/components/RangePicker";
 import { store, newId, useStore } from "@/lib/offline/store";
@@ -15,7 +16,8 @@ export default function Talqeen() {
   const s = useStore();
   const { mushaf, showToast } = useApp();
   const circles = s.all("circles").filter((c) => c.active).sort((a, b) => a.name.localeCompare(b.name, "ar"));
-  const [circleId, setCircleId] = useState(circles[0]?.id ?? "");
+  const [savedCircleId, setCircleId] = usePersistentState("talqeen.circle", "");
+  const circleId = circles.some((c) => c.id === savedCircleId) ? savedCircleId : (circles[0]?.id ?? "");
   const [date, setDate] = useState(todayStr());
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [range, setRange] = useState<QuranRange>({ from: { surah: 1, ayah: 1 }, to: { surah: 1, ayah: 7 } });

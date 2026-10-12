@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useApp } from "@/components/AppContext";
+import { usePersistentState } from "@/lib/usePersistentState";
 import ProgressRing from "@/components/ProgressRing";
 import { LOCAL_WINDOW_DAYS, useStore } from "@/lib/offline/store";
 import { entryRange, type Mushaf, type QuranRange } from "@/lib/quran";
@@ -45,8 +46,9 @@ export default function Reports() {
   const circles = s.all("circles").filter((c) => c.active).sort((a, b) => a.name.localeCompare(b.name, "ar"));
   const allStudents = s.all("students").filter((st) => st.active).sort((a, b) => a.name.localeCompare(b.name, "ar"));
 
-  const [scope, setScope] = useState<"all" | "circle" | "student">("all");
-  const [circleId, setCircleId] = useState(circles[0]?.id ?? "");
+  const [scope, setScope] = usePersistentState<"all" | "circle" | "student">("reports.scope", "all");
+  const [savedCircleId, setCircleId] = usePersistentState("reports.circle", "");
+  const circleId = circles.some((c) => c.id === savedCircleId) ? savedCircleId : (circles[0]?.id ?? "");
   const [studentId, setStudentId] = useState(allStudents[0]?.id ?? "");
   const [period, setPeriod] = useState<Period>("day");
   const [day, setDay] = useState(todayStr());
