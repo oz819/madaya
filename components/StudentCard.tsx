@@ -52,6 +52,10 @@ export default function StudentCard({ studentId, onClose }: { studentId: string;
   const enrollments = s.byStudent("student_arabic_enrollments").get(studentId) ?? [];
   const att = s.get("attendance", `${studentId}|${today}`);
   const books = s.lookup("arabic_books");
+  const lastFinished = enrollments
+    .filter((e) => !e.deleted_at && e.finished_on)
+    .sort((a, b) => b.finished_on!.localeCompare(a.finished_on!))
+    .map((e) => books.get(e.book_id)?.title)[0];
   const p = studentProgress({ mushaf, quran, arabic, enrollments, books, edu, attendanceToday: att });
   const unsynced = s.unsyncedStudents().has(studentId);
   const circle = s.get("circles", student.circle_id);
@@ -110,7 +114,11 @@ export default function StudentCard({ studentId, onClose }: { studentId: string;
           <Pos label="التلاوة" value={p.tilawa ? mushaf.formatRange(p.tilawa.range) : null} extra={p.tilawa?.percent != null ? `${p.tilawa.percent}%` : undefined} date={p.tilawa?.entry.entry_date} />
           <Pos label="المراجعة" value={p.murajaa ? mushaf.formatRange(p.murajaa.range) : null} date={p.murajaa?.entry.entry_date} />
           <Pos label="التلقين" value={p.talqeen ? mushaf.formatRange(p.talqeen.range) : null} date={p.talqeen?.entry.entry_date} />
-          <Pos label="العربية" value={p.arabic ? `${p.arabic.book.title} — ص ${p.arabic.page}` : null} extra={p.arabic ? `${p.arabic.percent}%` : undefined} />
+          <Pos
+            label="العربية"
+            value={p.arabic ? `${p.arabic.book.title} — ص ${p.arabic.page}` : lastFinished ? `✅ أنهى ${lastFinished}` : null}
+            extra={p.arabic ? `${p.arabic.percent}%` : undefined}
+          />
           <Pos label="آخر ملاحظة تربوية" value={p.lastTarbiya ?? null} />
         </div>
       </div>

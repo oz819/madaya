@@ -45,23 +45,46 @@ export default function ArabicSection({
     setError("");
   }
 
-  async function enroll() {
+  // A book the student is studying now, or one they already finished (e.g. before the app).
+  async function enroll(finished: boolean) {
     if (!enrollBook) return;
     const existing = enrollments.find((e) => e.book_id === enrollBook);
     await store.save(
       "student_arabic_enrollments",
-      { id: existing?.id ?? newId(), student_id: studentId, book_id: enrollBook, started_on: todayStr(), finished_on: null, deleted_at: null },
-      "تسجيل في كتاب عربية"
+      {
+        id: existing?.id ?? newId(),
+        student_id: studentId,
+        book_id: enrollBook,
+        started_on: todayStr(),
+        finished_on: finished ? todayStr() : null,
+        deleted_at: null,
+      },
+      finished ? "تسجيل كتاب عربية منتهٍ" : "تسجيل في كتاب عربية"
     );
-    setBookId(enrollBook);
+    if (!finished) {
+      setBookId(enrollBook);
+      reset(0);
+    }
     setEnrollBook("");
-    reset(0);
-    showToast("تم التسجيل في الكتاب");
+    showToast(finished ? "سُجّل الكتاب كمنتهٍ" : "تم التسجيل في الكتاب");
   }
 
-  async function finish(en: ArabicEnrollment) {
-    if (!confirm("تأكيد إنهاء هذا الكتاب؟")) return;
-    await store.save("student_arabic_enrollments", { ...en, finished_on: todayStr() }, "إنهاء كتاب عربية");
+  async function setFinished(en: ArabicEnrollment, finished: boolean) {
+    const title = s.get("arabic_books", en.book_id)?.title ?? "";
+    const ok = await confirmDialog({
+      title: finished ? `إنهاء كتاب «${title}»؟` : `إرجاع «${title}» إلى «يدرسه»؟`,
+      body: finished ? "يُسجَّل أن الطالب أنهى الكتاب اليوم، ويبقى ظاهرًا في كتب الطالب." : "يعود الكتاب إلى الكتب التي يدرسها الطالب الآن.",
+      ok: finished ? "إنهاء" : "إرجاع",
+    });
+    if (!ok) return;
+    await store.save(
+      "student_arabic_enrollments",
+      { ...en, finished_on: finished ? todayStr() : null },
+      finished ? "إنهاء كتاب عربية" : "إرجاع كتاب عربية"
+    );
+    if (finished && en.book_id === bookId) setBookId(active.find((a) => a.id !== en.id)?.book_id ?? "");
+    if (!finished && !book) setBookId(en.book_id);
+    showToast(finished ? `أنهى «${title}»` : `«${title}»: يدرسه`);
   }
 
   async function save() {
@@ -110,10 +133,36 @@ export default function ArabicSection({
     await store.softDelete("arabic_entries", e.id, "حذف درس عربية");
   }
 
-  const notEnrolled = books.filter((b) => !active.some((e) => e.book_id === b.id));
+  const mine = enrollments
+    .filter((e) => !e.deleted_at)
+    .sort((a, b) => Number(!!a.finished_on) - Number(!!b.finished_on) || b.started_on.localeCompare(a.started_on));
+  const notEnrolled = books.filter((b) => !mine.some((e) => e.book_id === b.id));
 
   return (
     <div className="track">
+      {mine.length > 0 && (
+        <div className="book-status">
+          <label>كتب الطالب</label>
+          <ul className="history">
+            {mine.map((en) => (
+              <li key={en.id}>
+                <div>
+                  <b>{s.get("arabic_books", en.book_id)?.title ?? "—"}</b>
+                  {en.finished_on ? (
+                    <span className="badge excellent">✅ أنهاه · {en.finished_on}</span>
+                  ) : (
+                    <span className="badge warn">📖 يدرسه · منذ {en.started_on}</span>
+                  )}
+                </div>
+                <button className="link" onClick={() => setFinished(en, !en.finished_on)}>
+                  {en.finished_on ? "إرجاع لـ «يدرسه»" : "✅ أنهى الكتاب"}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {active.length > 0 && (
         <div className="formgrid compact">
           <div>
@@ -176,11 +225,6 @@ export default function ArabicSection({
                 إلغاء
               </button>
             )}
-            {active.find((e) => e.book_id === bookId) && (
-              <button className="link" onClick={() => finish(active.find((e) => e.book_id === bookId)!)}>
-                إنهاء الكتاب
-              </button>
-            )}
           </div>
           {error && <p className="error-text">{error}</p>}
           <ul className="history">
@@ -211,15 +255,18 @@ export default function ArabicSection({
       {notEnrolled.length > 0 && (
         <div className="row-actions" style={{ marginTop: 8 }}>
           <select value={enrollBook} onChange={(e) => setEnrollBook(e.target.value)} style={{ maxWidth: 260 }}>
-            <option value="">تسجيل في كتاب…</option>
+            <option value="">إضافة كتاب للطالب…</option>
             {notEnrolled.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.title} ({b.total_pages} ص)
               </option>
             ))}
           </select>
-          <button className="secondary" onClick={enroll} disabled={!enrollBook}>
-            تسجيل
+          <button className="secondary" onClick={() => enroll(false)} disabled={!enrollBook}>
+            📖 يدرسه
+          </button>
+          <button className="secondary" onClick={() => enroll(true)} disabled={!enrollBook}>
+            ✅ أنهاه
           </button>
         </div>
       )}

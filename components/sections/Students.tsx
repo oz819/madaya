@@ -8,7 +8,7 @@ import { usePersistentState } from "@/lib/usePersistentState";
 import { store, newId, useStore } from "@/lib/offline/store";
 import { latestOfTrack } from "@/lib/progress";
 import { entryRange, type Mushaf, type QuranRange } from "@/lib/quran";
-import { ATTENDANCE_LABEL, todayStr, type Attendance, type AttendanceStatus, type QuranEntry, type Student } from "@/lib/types";
+import { ATTENDANCE_LABEL, todayStr, type ArabicEnrollment, type Attendance, type AttendanceStatus, type QuranEntry, type Student } from "@/lib/types";
 
 const RECENT_KEY = "recentStudents";
 
@@ -73,6 +73,7 @@ export default function Students({
   // A remembered circle that was since archived or deleted falls back to all circles.
   const circleId = savedCircleId === "all" || circles.some((c) => c.id === savedCircleId) ? savedCircleId : "all";
   const quranBy = s.byStudent("quran_entries");
+  const enrollBy = s.byStudent("student_arabic_enrollments");
   const unsynced = s.unsyncedStudents();
   const students = s
     .all("students")
@@ -182,6 +183,7 @@ export default function Students({
           <ul className="student-list">
             {students.map((st) => {
               const hifz = latestOfTrack(quranBy.get(st.id), "HIFZ");
+              const bookLine = arabicStatus(enrollBy.get(st.id), (id) => s.get("arabic_books", id)?.title);
               const att = s.get("attendance", `${st.id}|${today}`);
               const status = att && !att.deleted_at ? (att.status as AttendanceStatus) : null;
               return (
@@ -192,6 +194,7 @@ export default function Students({
                     <div className="small muted">
                       {s.get("circles", st.circle_id)?.name ?? "—"}
                       {hifz && ` · حفظ: ${mushaf.formatRange(entryRange(hifz))}`}
+                      {bookLine && ` · ${bookLine}`}
                     </div>
                   </div>
                   {status && (
@@ -453,4 +456,14 @@ function monthHifz(mushaf: Mushaf, entries: QuranEntry[] | undefined, month: str
     .map(entryRange)
     .filter((r): r is QuranRange => !!r);
   return ranges.length ? mushaf.coverage(ranges) : 0;
+}
+
+// e.g. "📖 الرشيدي" while studying it, or "✅ أنهى الرشيدي" once every book is finished.
+function arabicStatus(enrollments: ArabicEnrollment[] | undefined, title: (bookId: string) => string | undefined): string {
+  const mine = (enrollments ?? []).filter((e) => !e.deleted_at);
+  const studying = mine.filter((e) => !e.finished_on).map((e) => title(e.book_id)).filter(Boolean);
+  if (studying.length) return `📖 ${studying.join("، ")}`;
+  const last = mine.filter((e) => e.finished_on).sort((a, b) => b.finished_on!.localeCompare(a.finished_on!))[0];
+  const t = last && title(last.book_id);
+  return t ? `✅ أنهى ${t}` : "";
 }
