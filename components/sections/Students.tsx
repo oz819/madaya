@@ -74,6 +74,7 @@ export default function Students({
   const circleId = savedCircleId === "all" || circles.some((c) => c.id === savedCircleId) ? savedCircleId : "all";
   const quranBy = s.byStudent("quran_entries");
   const enrollBy = s.byStudent("student_arabic_enrollments");
+  const books = s.all("arabic_books").filter((b) => b.active).sort((a, b) => a.title.localeCompare(b.title, "ar"));
   const unsynced = s.unsyncedStudents();
   const students = s
     .all("students")
@@ -196,6 +197,25 @@ export default function Students({
                       {hifz && ` · حفظ: ${mushaf.formatRange(entryRange(hifz))}`}
                       {bookLine && ` · ${bookLine}`}
                     </div>
+                    {/* Quick way to set the book a student is studying, without opening the card. */}
+                    <select
+                      aria-label="الكتاب الذي يدرسه"
+                      className="book-select"
+                      style={{ marginTop: 6, padding: "6px 8px", fontSize: "0.9em" }}
+                      value={(enrollBy.get(st.id) ?? []).find((e) => !e.deleted_at && !e.finished_on)?.book_id ?? ""}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setStudyingBook(st.id, e.target.value, enrollBy.get(st.id) ?? []);
+                      }}
+                    >
+                      <option value="">— اختر الكتاب —</option>
+                      {books.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.title}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   {status && (
                     <span className={`badge ${status === "ABSENT" ? "redo" : status === "EXCUSED" ? "warn" : "excellent"}`}>
@@ -456,6 +476,25 @@ function monthHifz(mushaf: Mushaf, entries: QuranEntry[] | undefined, month: str
     .map(entryRange)
     .filter((r): r is QuranRange => !!r);
   return ranges.length ? mushaf.coverage(ranges) : 0;
+}
+
+// Sets the book a student is studying now. Reuses the existing enrollment row for that book
+// (reopening it if it had been marked finished), so the same book is never listed twice.
+async function setStudyingBook(studentId: string, bookId: string, enrollments: ArabicEnrollment[]) {
+  if (!bookId) return;
+  const existing = enrollments.find((e) => e.book_id === bookId);
+  await store.save(
+    "student_arabic_enrollments",
+    {
+      id: existing?.id ?? newId(),
+      student_id: studentId,
+      book_id: bookId,
+      started_on: existing?.started_on ?? todayStr(),
+      finished_on: null,
+      deleted_at: null,
+    },
+    "تحديد الكتاب الذي يدرسه"
+  );
 }
 
 // e.g. "📖 الرشيدي" while studying it, or "✅ أنهى الرشيدي" once every book is finished.
