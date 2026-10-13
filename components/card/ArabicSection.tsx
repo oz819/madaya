@@ -18,13 +18,26 @@ export default function ArabicSection({
   entries: ArabicEntry[];
 }) {
   const s = useStore();
-  const { showToast } = useApp();
+  const { showToast, supabase } = useApp();
   const books = s.all("arabic_books").filter((b) => b.active);
   const active = enrollments.filter((e) => !e.deleted_at && !e.finished_on);
   const [bookId, setBookId] = useState(active[0]?.book_id ?? "");
   const book = s.get("arabic_books", bookId);
   const forBook = entries.filter((e) => e.book_id === bookId).sort(byNewest((e) => e.entry_date));
   const lastPage = forBook.reduce((m, e) => Math.max(m, e.to_page), 0);
+
+  // Opens the book's PDF through a signed link that lasts one hour (staff only, enforced by RLS).
+  async function openBookPdf(path: string) {
+    // Open the tab first, so the browser doesn't block it after the await.
+    const win = window.open("", "_blank");
+    const { data, error } = await supabase.storage.from("arabic-books").createSignedUrl(path, 3600);
+    if (error || !data) {
+      win?.close();
+      return showToast("تعذّر فتح الملف، تأكد من الاتصال");
+    }
+    if (win) win.location.href = data.signedUrl;
+    else window.location.href = data.signedUrl;
+  }
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [fromPage, setFromPage] = useState(lastPage + 1 || 1);
@@ -175,6 +188,14 @@ export default function ArabicSection({
               ))}
             </select>
           </div>
+          {book?.pdf_path && (
+            <div>
+              <label>نسخة الكتاب</label>
+              <button className="link" type="button" onClick={() => openBookPdf(book.pdf_path!)}>
+                📄 فتح PDF
+              </button>
+            </div>
+          )}
           {book && (
             <div>
               <label>التقدّم</label>

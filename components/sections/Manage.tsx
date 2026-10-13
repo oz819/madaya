@@ -1,10 +1,13 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/AppContext";
 import { confirmDialog } from "@/components/ConfirmDialog";
 import { adminSoftDelete } from "@/lib/adminDelete";
 import { store, useStore } from "@/lib/offline/store";
+
+// Free-plan per-file limit for book PDFs (same as the arabic-books bucket).
+const MAX_PDF_BYTES = 50 * 1024 * 1024;
 
 // Admin-only actions (spec §5.4). These need a connection: they write straight to Supabase
 // (RLS re-checks is_admin()) and then refresh the local copy.
@@ -366,7 +369,35 @@ function ArabicBooks() {
   const [title, setTitle] = useState("");
   const [pages, setPages] = useState("");
   const [error, setError] = useState("");
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [pickingId, setPickingId] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
   const books = s.all("arabic_books").sort((a, b) => Number(b.active) - Number(a.active) || a.title.localeCompare(b.title, "ar"));
+
+  // The PDF goes to the private "arabic-books" bucket under the book's id (replacing any old one).
+  // Staff open it through a signed link; only admins can upload (RLS re-checks is_admin()).
+  async function uploadPdf(bookId: string, file: File) {
+    setError("");
+    if (file.type !== "application/pdf") return setError("الملف لازم يكون PDF");
+    if (file.size > MAX_PDF_BYTES) return setError("الملف أكبر من 50 ميغا، اضغطه ثم ارفعه");
+    setUploadingId(bookId);
+    const path = `${bookId}.pdf`;
+    const up = await supabase.storage.from("arabic-books").upload(path, file, { upsert: true, contentType: "application/pdf" });
+    if (up.error) {
+      setUploadingId(null);
+      return setError(up.error.message);
+    }
+    const { data, error } = await supabase
+      .from("arabic_books")
+      .update({ pdf_path: path, edited_at: new Date().toISOString() })
+      .eq("id", bookId)
+      .select()
+      .single();
+    setUploadingId(null);
+    if (error) return setError(error.message);
+    await store.applyRemote("arabic_books", [data]);
+    showToast("تم رفع ملف الكتاب");
+  }
 
   async function add() {
     setError("");
@@ -426,6 +457,17 @@ function ArabicBooks() {
         <button onClick={add}>إضافة كتاب</button>
       </div>
       {error && <p className="error-text">{error}</p>}
+      <input
+        ref={fileInput}
+        type="file"
+        accept="application/pdf"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (file && pickingId) uploadPdf(pickingId, file);
+        }}
+      />
       {books.length > 0 && (
         <table>
           <thead>
@@ -438,9 +480,22 @@ function ArabicBooks() {
           <tbody>
             {books.map((b) => (
               <tr key={b.id} className={b.active ? "" : "muted"}>
-                <td>{b.title}</td>
+                <td>
+                  {b.title}
+                  {b.pdf_path && <span className="small muted"> · 📄 PDF</span>}
+                </td>
                 <td>{b.total_pages}</td>
                 <td className="row-actions">
+                  <button
+                    className="link"
+                    disabled={uploadingId === b.id}
+                    onClick={() => {
+                      setPickingId(b.id);
+                      fileInput.current?.click();
+                    }}
+                  >
+                    {uploadingId === b.id ? "جارٍ الرفع…" : b.pdf_path ? "استبدال PDF" : "رفع PDF"}
+                  </button>
                   <button className="link" onClick={() => toggle(b.id, !b.active)}>
                     {b.active ? "أرشفة" : "استعادة"}
                   </button>

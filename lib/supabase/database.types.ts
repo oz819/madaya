@@ -25,6 +25,7 @@ export type Database = {
           deleted_by: string | null
           edited_at: string
           id: string
+          pdf_path: string | null
           title: string
           total_pages: number
           updated_at: string
@@ -37,6 +38,7 @@ export type Database = {
           deleted_by?: string | null
           edited_at?: string
           id?: string
+          pdf_path?: string | null
           title: string
           total_pages: number
           updated_at?: string
@@ -49,6 +51,7 @@ export type Database = {
           deleted_by?: string | null
           edited_at?: string
           id?: string
+          pdf_path?: string | null
           title?: string
           total_pages?: number
           updated_at?: string
