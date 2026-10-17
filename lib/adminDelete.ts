@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
-import { store } from "@/lib/offline/store";
+import { PROFILE_COLUMNS, store } from "@/lib/offline/store";
 
 export type AdminDeletable = "profile" | "student" | "circle" | "arabic_book";
 
@@ -17,7 +17,7 @@ export async function adminSoftDelete(
   if (error) return /fetch|network/i.test(error.message) ? "الحذف يحتاج اتصالًا بالإنترنت" : error.message;
 
   if (kind === "profile") {
-    const { data } = await supabase.from("profiles").select("id,name,role,active,deleted_at").eq("id", id);
+    const { data } = await supabase.from("profiles").select(PROFILE_COLUMNS).eq("id", id);
     if (data) await store.applyRemote("profiles", data);
   } else {
     const table = kind === "student" ? "students" : kind === "circle" ? "circles" : "arabic_books";

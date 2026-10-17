@@ -4,7 +4,8 @@ import { Fragment, useEffect, useState } from "react";
 import { useApp } from "@/components/AppContext";
 import { confirmDialog } from "@/components/ConfirmDialog";
 import { adminSoftDelete } from "@/lib/adminDelete";
-import { store, useStore } from "@/lib/offline/store";
+import { PROFILE_COLUMNS, store, useStore } from "@/lib/offline/store";
+import { SECTIONS, SECTION_LABEL, effectiveFilter, filterLabel, filterOptions } from "@/lib/filter";
 
 // Admin-only actions (spec §5.4). These need a connection: they write straight to Supabase
 // (RLS re-checks is_admin()) and then refresh the local copy.
@@ -34,6 +35,9 @@ function Teachers() {
   const [editId, setEditId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
+  const [editFilter, setEditFilter] = useState("all");
+  const circles = s.all("circles").filter((c) => c.active).sort((a, b) => a.name.localeCompare(b.name, "ar"));
+  const filterChoices = filterOptions(circles);
   const people = s.all("profiles").sort((a, b) => a.name.localeCompare(b.name, "ar"));
 
   async function loadEmails() {
@@ -49,7 +53,7 @@ function Teachers() {
   }, []);
 
   async function refresh() {
-    const { data } = await supabase.from("profiles").select("id,name,role,active,deleted_at");
+    const { data } = await supabase.from("profiles").select(PROFILE_COLUMNS);
     if (data) await store.applyRemote("profiles", data);
   }
 
@@ -84,25 +88,31 @@ function Teachers() {
     showToast(msg);
   }
 
-  function startEdit(id: string, currentName: string) {
+  function startEdit(id: string, currentName: string, currentFilter: string | null) {
     setError("");
     setEditId(id);
     setEditName(currentName);
     setEditEmail(emails[id] ?? "");
+    setEditFilter(effectiveFilter(currentFilter ?? "all", circles));
   }
 
-  async function saveEdit(id: string, currentName: string) {
-    const patch: { name?: string; email?: string } = {};
+  async function saveEdit(id: string, currentName: string, currentFilter: string | null) {
+    const patch: { name?: string; email?: string; default_filter?: string | null } = {};
     if (editName.trim() !== currentName) patch.name = editName.trim();
     if (editEmail.trim() && editEmail.trim() !== (emails[id] ?? "")) patch.email = editEmail.trim();
-    if (!patch.name && !patch.email) return setEditId(null);
+    if (editFilter !== effectiveFilter(currentFilter ?? "all", circles)) patch.default_filter = editFilter === "all" ? null : editFilter;
+    if (!patch.name && !patch.email && patch.default_filter === undefined) return setEditId(null);
     setBusy(true);
     setError("");
     try {
       // The name is a plain profiles update (RLS: admins only); only the login email needs the
       // server route, because changing it goes through the Auth Admin API.
-      if (patch.name) {
-        const { error } = await supabase.from("profiles").update({ name: patch.name }).eq("id", id);
+      if (patch.name || patch.default_filter !== undefined) {
+        // undefined fields are left out of the request, so only what changed is written.
+        const { error } = await supabase
+          .from("profiles")
+          .update({ name: patch.name, default_filter: patch.default_filter })
+          .eq("id", id);
         if (error) return setError(error.message);
       }
       if (patch.email) {
@@ -182,7 +192,12 @@ function Teachers() {
             {people.map((p) => (
               <Fragment key={p.id}>
                 <tr>
-                  <td>{p.name}</td>
+                  <td>
+                    {p.name}
+                    {p.default_filter && effectiveFilter(p.default_filter, circles) !== "all" && (
+                      <div className="small muted">يفتح على: {filterLabel(effectiveFilter(p.default_filter, circles), circles)}</div>
+                    )}
+                  </td>
                   <td className="small" dir="ltr" style={{ textAlign: "right" }}>
                     {emails[p.id] ?? "—"}
                   </td>
@@ -216,7 +231,7 @@ function Teachers() {
                         )}
                       </>
                     )}
-                    <button className="link" onClick={() => startEdit(p.id, p.name)}>
+                    <button className="link" onClick={() => startEdit(p.id, p.name, p.default_filter)}>
                       تعديل
                     </button>
                     <button className="link" onClick={() => resetPassword(p.id)}>
@@ -241,8 +256,24 @@ function Teachers() {
                           <label>البريد الإلكتروني (للدخول)</label>
                           <input type="email" dir="ltr" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
                         </div>
+                        <div>
+                          <label>يفتح التطبيق على</label>
+                          <select value={editFilter} onChange={(e) => setEditFilter(e.target.value)}>
+                            <option value="all">كل الطلاب</option>
+                            {filterChoices.sections.map((sec) => (
+                              <option key={sec} value={`s:${sec}`}>
+                                {SECTION_LABEL[sec]}
+                              </option>
+                            ))}
+                            {filterChoices.circles.map((c) => (
+                              <option key={c.id} value={`c:${c.id}`}>
+                                {c.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                         <div className="row-actions" style={{ alignSelf: "end" }}>
-                          <button disabled={busy || !editName.trim()} onClick={() => saveEdit(p.id, p.name)}>
+                          <button disabled={busy || !editName.trim()} onClick={() => saveEdit(p.id, p.name, p.default_filter)}>
                             حفظ
                           </button>
                           <button className="secondary" onClick={() => setEditId(null)}>
@@ -284,7 +315,7 @@ function Halaqat() {
     showToast("تم إنشاء الحلقة");
   }
 
-  async function update(id: string, patch: { name?: string; active?: boolean }) {
+  async function update(id: string, patch: { name?: string; active?: boolean; section?: string | null }) {
     setError("");
     const { data, error } = await supabase
       .from("circles")
@@ -314,7 +345,10 @@ function Halaqat() {
   return (
     <div className="card">
       <h3>🏫 الحلقات</h3>
-      <p className="small muted">اسم الحلقة نص حر يحمل أي تصنيف تريده، مثل «ذكور – الشيخ أحمد» أو «إناث 10–12».</p>
+      <p className="small muted">
+        اسم الحلقة نص حر، مثل «ذكور – الشيخ أحمد» أو «إناث 10–12». حدّد قسم كل حلقة (الذكور / الإناث)، فيظهر القسم في فرز الطلاب ويجمع
+        كل حلقاته.
+      </p>
       <div className="search-row">
         <input placeholder="اسم الحلقة" value={name} onChange={(e) => setName(e.target.value)} />
         <button onClick={add}>إضافة حلقة</button>
@@ -324,6 +358,7 @@ function Halaqat() {
         <thead>
           <tr>
             <th>الحلقة</th>
+            <th>القسم</th>
             <th>الطلاب</th>
             <th></th>
           </tr>
@@ -333,6 +368,21 @@ function Halaqat() {
             <tr key={c.id} className={c.active ? "" : "muted"}>
               <td>
                 {c.name} {!c.active && <span className="badge">مؤرشفة</span>}
+              </td>
+              <td>
+                <select
+                  className="cell-select"
+                  value={c.section ?? ""}
+                  onChange={(e) => update(c.id, { section: e.target.value || null })}
+                  aria-label={`قسم ${c.name}`}
+                >
+                  <option value="">—</option>
+                  {SECTIONS.map((sec) => (
+                    <option key={sec} value={sec}>
+                      {SECTION_LABEL[sec]}
+                    </option>
+                  ))}
+                </select>
               </td>
               <td>{count(c.id)}</td>
               <td className="row-actions">

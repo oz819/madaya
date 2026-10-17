@@ -7,6 +7,8 @@ export type Profile = {
   name: string;
   role: Role;
   active: boolean;
+  /** Where this account's pages open until the user picks another filter (set by the admin). */
+  default_filter?: string | null;
 };
 
 export type Surah = { surah_no: number; name: string; ayah_count: number };

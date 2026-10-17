@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useApp } from "@/components/AppContext";
 import { usePersistentState } from "@/lib/usePersistentState";
 import ProgressRing from "@/components/ProgressRing";
+import { useScope } from "@/components/FilterBar";
 import { LOCAL_WINDOW_DAYS, useStore } from "@/lib/offline/store";
 import { entryRange, type Mushaf, type QuranRange } from "@/lib/quran";
 import {
@@ -43,13 +44,17 @@ type Row = { student: Student; cells: Partial<Record<TrackKey, Cell>> };
 export default function Reports() {
   const s = useStore();
   const { supabase, mushaf } = useApp();
-  const circles = s.all("circles").filter((c) => c.active).sort((a, b) => a.name.localeCompare(b.name, "ar"));
-  const allStudents = s.all("students").filter((st) => st.active).sort((a, b) => a.name.localeCompare(b.name, "ar"));
+  // Who the report covers: the students in the shared filter (section / halaqa / all), or one of them.
+  const { filter, inScope, label: filterName } = useScope();
+  const allStudents = s
+    .all("students")
+    .filter((st) => st.active && inScope(st.circle_id))
+    .sort((a, b) => a.name.localeCompare(b.name, "ar"));
 
-  const [scope, setScope] = usePersistentState<"all" | "circle" | "student">("reports.scope", "all");
-  const [savedCircleId, setCircleId] = usePersistentState("reports.circle", "");
-  const circleId = circles.some((c) => c.id === savedCircleId) ? savedCircleId : (circles[0]?.id ?? "");
-  const [studentId, setStudentId] = useState(allStudents[0]?.id ?? "");
+  const [scope, setScope] = usePersistentState<"filter" | "student">("reports.mode", "filter");
+  const [savedStudentId, setStudentId] = useState(allStudents[0]?.id ?? "");
+  const studentId = allStudents.some((st) => st.id === savedStudentId) ? savedStudentId : (allStudents[0]?.id ?? "");
+  const circleId = filter.startsWith("c:") ? filter.slice(2) : null;
   const [period, setPeriod] = useState<Period>("day");
   const [day, setDay] = useState(todayStr());
   const [from, setFrom] = useState(addDays(todayStr(), -6));
@@ -68,9 +73,7 @@ export default function Reports() {
         ? [from, to]
         : [`${month}-01`, addDays(`${addMonth(month)}-01`, -1)];
 
-  const students = allStudents.filter(
-    (st) => scope === "all" || (scope === "circle" ? st.circle_id === circleId : st.id === studentId)
-  );
+  const students = allStudents.filter((st) => scope === "filter" || st.id === studentId);
   const studentIds = new Set(students.map((st) => st.id));
 
   useEffect(() => {
@@ -95,7 +98,7 @@ export default function Reports() {
       const { data: res, error: err } = await supabase.rpc("report_data", {
         p_from: pFrom,
         p_to: pTo,
-        ...(scope === "circle" ? { p_circle_id: circleId } : {}),
+        ...(scope === "filter" && circleId ? { p_circle_id: circleId } : {}),
         ...(scope === "student" ? { p_student_id: studentId } : {}),
       });
       if (cancelled) return;
@@ -126,7 +129,7 @@ export default function Reports() {
   const chosen = TRACKS.filter((t) => tracks.has(t.id));
   const rows = filtered ? buildRows(students, filtered, chosen.map((t) => t.id), period, mushaf, books) : [];
   const scopeLabel =
-    scope === "all" ? "جميع الحلقات" : scope === "circle" ? s.get("circles", circleId)?.name ?? "—" : s.get("students", studentId)?.name ?? "—";
+    scope === "student" ? (s.get("students", studentId)?.name ?? "—") : filter === "all" ? "جميع الحلقات" : filterName;
   const periodLabel = period === "day" ? pFrom : period === "month" ? month : `${pFrom} ← ${pTo}`;
   const whatsapp = buildWhatsApp(rows, chosen, scopeLabel, periodLabel);
   const timeline = scope === "student" && filtered ? buildTimeline(filtered, chosen.map((t) => t.id), mushaf, books) : null;
@@ -154,24 +157,11 @@ export default function Reports() {
         <div className="formgrid compact">
           <div>
             <label>النطاق</label>
-            <select value={scope} onChange={(e) => setScope(e.target.value as typeof scope)}>
-              <option value="all">كل الطلاب</option>
-              <option value="circle">حلقة</option>
-              <option value="student">طالب</option>
+            <select value={scope === "student" ? "student" : "filter"} onChange={(e) => setScope(e.target.value as typeof scope)}>
+              <option value="filter">{filter === "all" ? "كل الطلاب" : filter.startsWith("s:") ? `كل ${filterName}` : `طلاب ${filterName}`}</option>
+              <option value="student">طالب واحد</option>
             </select>
           </div>
-          {scope === "circle" && (
-            <div>
-              <label>الحلقة</label>
-              <select value={circleId} onChange={(e) => setCircleId(e.target.value)}>
-                {circles.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
           {scope === "student" && (
             <div>
               <label>الطالب</label>

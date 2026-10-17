@@ -5,6 +5,7 @@ import { useApp } from "@/components/AppContext";
 import { usePersistentState } from "@/lib/usePersistentState";
 import { confirmDialog } from "@/components/ConfirmDialog";
 import RangePicker from "@/components/RangePicker";
+import { useScope } from "@/components/FilterBar";
 import { store, newId, useStore } from "@/lib/offline/store";
 import type { QuranRange } from "@/lib/quran";
 import { todayStr, type TalqeenSession } from "@/lib/types";
@@ -15,7 +16,8 @@ type Tick = { checked: boolean; notes: string };
 export default function Talqeen() {
   const s = useStore();
   const { mushaf, showToast } = useApp();
-  const circles = s.all("circles").filter((c) => c.active).sort((a, b) => a.name.localeCompare(b.name, "ar"));
+  // A session is for one halaqa: offer the ones the shared filter covers.
+  const circles = useScope().scopedCircles;
   const [savedCircleId, setCircleId] = usePersistentState("talqeen.circle", "");
   const circleId = circles.some((c) => c.id === savedCircleId) ? savedCircleId : (circles[0]?.id ?? "");
   const [date, setDate] = useState(todayStr());

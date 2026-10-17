@@ -206,6 +206,7 @@ export type Database = {
           edited_at: string
           id: string
           name: string
+          section: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -217,6 +218,7 @@ export type Database = {
           edited_at?: string
           id?: string
           name: string
+          section?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -228,6 +230,7 @@ export type Database = {
           edited_at?: string
           id?: string
           name?: string
+          section?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -722,6 +725,7 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          default_filter: string | null
           deleted_at: string | null
           deleted_by: string | null
           id: string
@@ -731,6 +735,7 @@ export type Database = {
         Insert: {
           active?: boolean
           created_at?: string
+          default_filter?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
           id: string
@@ -740,6 +745,7 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
+          default_filter?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
           id?: string
@@ -1062,6 +1068,24 @@ export type Database = {
             referencedColumns: ["surah_no"]
           },
         ]
+      }
+      user_settings: {
+        Row: {
+          filter: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          filter?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          filter?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {

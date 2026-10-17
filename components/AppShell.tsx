@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import type { Profile, Role } from "@/lib/types";
 import { Mushaf } from "@/lib/quran";
-import { store, useStore } from "@/lib/offline/store";
+import { PROFILE_COLUMNS, store, useStore } from "@/lib/offline/store";
+import { filterStore } from "@/lib/filter";
 import { getMeta, setMeta } from "@/lib/offline/idb";
 import { ACCOUNT_DELETED_MESSAGE, ACCOUNT_DISABLED_MESSAGE, NOT_REGISTERED_MESSAGE } from "@/lib/messages";
 import { AppContext } from "@/components/AppContext";
@@ -19,6 +20,7 @@ import ConfirmDialogHost from "@/components/ConfirmDialog";
 import SyncBadge from "@/components/SyncBadge";
 import SlidingIndicator from "@/components/SlidingIndicator";
 import InstallHint from "@/components/InstallHint";
+import FilterBar from "@/components/FilterBar";
 import Toast, { useToast } from "@/components/Toast";
 
 type Page = "students" | "talqeen" | "reports" | "manage" | "trash";
@@ -66,7 +68,7 @@ export default function AppShell() {
       if (navigator.onLine) {
         const { data, error } = await supabase
           .from("profiles")
-          .select("id,name,role,active,deleted_at")
+          .select(PROFILE_COLUMNS)
           .eq("id", userId)
           .maybeSingle();
         if (!error) {
@@ -75,7 +77,7 @@ export default function AppShell() {
             await supabase.auth.signOut();
             return;
           }
-          p = { id: data.id, name: data.name, role: data.role as Role, active: data.active };
+          p = { id: data.id, name: data.name, role: data.role as Role, active: data.active, default_filter: data.default_filter };
         }
       }
       if (!p) {
@@ -91,6 +93,7 @@ export default function AppShell() {
       }
       await setMeta("profile", { userId, profile: p } satisfies CachedProfile);
       setProfile(p);
+      filterStore.init(supabase, userId, p.default_filter);
       await store.start(supabase, userId);
       started = true;
     })();
@@ -231,6 +234,7 @@ export default function AppShell() {
       <main>
         <div className="no-print">
           <InstallHint />
+          {((page === "students" && !view.studentId) || page === "talqeen" || page === "reports") && <FilterBar />}
         </div>
         {page === "students" && <Students openId={view.studentId} onOpen={openStudent} onClose={closeStudent} />}
         {page === "talqeen" && <Talqeen />}

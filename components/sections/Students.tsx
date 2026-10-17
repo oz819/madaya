@@ -3,12 +3,13 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "@/components/AppContext";
 import StudentCard from "@/components/StudentCard";
+import { useScope } from "@/components/FilterBar";
 import { matchesName } from "@/lib/arabic";
 import { usePersistentState } from "@/lib/usePersistentState";
 import { store, newId, useStore } from "@/lib/offline/store";
 import { latestOfTrack } from "@/lib/progress";
 import { entryRange, type Mushaf, type QuranRange } from "@/lib/quran";
-import { ATTENDANCE_LABEL, todayStr, type ArabicEnrollment, type Attendance, type AttendanceStatus, type QuranEntry, type Student } from "@/lib/types";
+import { ATTENDANCE_LABEL, todayStr, type ArabicEnrollment, type Attendance, type AttendanceStatus, type Circle, type QuranEntry, type Student } from "@/lib/types";
 
 const RECENT_KEY = "recentStudents";
 
@@ -35,8 +36,8 @@ export default function Students({
   const [query, setQuery] = useState("");
   // Typing stays responsive on long lists: the filtered list re-renders at lower priority.
   const deferredQuery = useDeferredValue(query);
-  // Filters are remembered, so opening a student, switching tabs or reopening the app keeps them.
-  const [savedCircleId, setCircleId] = usePersistentState("students.circle", "all");
+  // The section/halaqa filter is shared by every page and remembered (lib/filter.ts).
+  const { inScope, scopedCircles } = useScope();
   const [showArchived, setShowArchived] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);
@@ -69,16 +70,13 @@ export default function Students({
     const a = s.get("attendance", `${id}|${today}`);
     return !!a && !a.deleted_at;
   };
-  const circles = s.all("circles").filter((c) => c.active).sort((a, b) => a.name.localeCompare(b.name, "ar"));
-  // A remembered circle that was since archived or deleted falls back to all circles.
-  const circleId = savedCircleId === "all" || circles.some((c) => c.id === savedCircleId) ? savedCircleId : "all";
   const quranBy = s.byStudent("quran_entries");
   const enrollBy = s.byStudent("student_arabic_enrollments");
   const unsynced = s.unsyncedStudents();
   const students = s
     .all("students")
     .filter((st) => (showArchived ? !st.active : st.active))
-    .filter((st) => circleId === "all" || st.circle_id === circleId)
+    .filter((st) => inScope(st.circle_id))
     .filter((st) => matchesName(st.name, deferredQuery))
     .filter((st) =>
       pending === "noAtt"
@@ -89,7 +87,7 @@ export default function Students({
     )
     .sort((a, b) => a.name.localeCompare(b.name, "ar"));
 
-  const active = s.all("students").filter((st) => st.active);
+  const active = s.all("students").filter((st) => st.active && inScope(st.circle_id));
   const presentToday = active.filter((st) => {
     const a = s.get("attendance", `${st.id}|${today}`);
     return a && !a.deleted_at && (a.status === "PRESENT" || a.status === "LATE");
@@ -109,7 +107,7 @@ export default function Students({
 
       {rollCall && (
         <RollCall
-          circleId={circleId}
+          circles={scopedCircles}
           onClose={() => setRollCall(false)}
           onDone={(n) => showToast(`تم تحضير ${n} طالب`)}
         />
@@ -127,7 +125,7 @@ export default function Students({
         </div>
         {adding && (
           <AddStudent
-            defaultCircleId={circleId}
+            defaultCircleId={scopedCircles[0]?.id ?? ""}
             onAdded={(id) => {
               setAdding(false);
               showToast("تمت إضافة الطالب");
@@ -135,16 +133,8 @@ export default function Students({
             }}
           />
         )}
-        <div className="search-row">
+        <div className="search-row" style={{ gridTemplateColumns: "1fr" }}>
           <input type="search" placeholder="ابحث باسم الطالب..." value={query} onChange={(e) => setQuery(e.target.value)} />
-          <select value={circleId} onChange={(e) => setCircleId(e.target.value)}>
-            <option value="all">كل الحلقات</option>
-            {circles.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
         </div>
         <div className="recent">
           <span className="muted">عرض:</span>
@@ -301,11 +291,12 @@ function StatTile({ icon, label, value, of }: { icon: string; label: string; val
 const ROLL_STATUSES: AttendanceStatus[] = ["PRESENT", "LATE", "EXCUSED", "ABSENT"];
 
 // Mark today's attendance for a whole circle on one screen instead of opening each student card.
-function RollCall({ circleId, onClose, onDone }: { circleId: string; onClose: () => void; onDone: (n: number) => void }) {
+// Offers the halaqat the shared filter covers.
+function RollCall({ circles, onClose, onDone }: { circles: Circle[]; onClose: () => void; onDone: (n: number) => void }) {
   const s = useStore();
   const today = todayStr();
-  const circles = s.all("circles").filter((c) => c.active).sort((a, b) => a.name.localeCompare(b.name, "ar"));
-  const [cid, setCid] = useState(circleId !== "all" ? circleId : (circles[0]?.id ?? ""));
+  const [savedCid, setCid] = useState(circles[0]?.id ?? "");
+  const cid = circles.some((c) => c.id === savedCid) ? savedCid : (circles[0]?.id ?? "");
   const roster = s
     .all("students")
     .filter((st) => st.active && st.circle_id === cid)

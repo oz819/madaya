@@ -24,7 +24,16 @@ import type {
 import { addDays, todayStr } from "@/lib/types";
 import * as idb from "@/lib/offline/idb";
 
-export type ProfileRow = { id: string; name: string; role: string; active: boolean; deleted_at: string | null };
+export type ProfileRow = {
+  id: string;
+  name: string;
+  role: string;
+  active: boolean;
+  deleted_at: string | null;
+  default_filter: string | null;
+};
+
+export const PROFILE_COLUMNS = "id,name,role,active,deleted_at,default_filter";
 
 type TableRows = {
   circles: Circle;
@@ -707,7 +716,7 @@ class LocalStore {
       await merge("quran_surahs", data ?? []);
     }
     {
-      const { data, error } = await sb.from("profiles").select("id,name,role,active,deleted_at");
+      const { data, error } = await sb.from("profiles").select(PROFILE_COLUMNS);
       if (error) throw new Error(error.message);
       const ids = new Set((data ?? []).map((p) => p.id));
       for (const k of Array.from(this.data.profiles.keys())) {
