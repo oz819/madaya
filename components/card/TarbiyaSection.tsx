@@ -5,21 +5,24 @@ import { useApp } from "@/components/AppContext";
 import { confirmDialog } from "@/components/ConfirmDialog";
 import { store, newId } from "@/lib/offline/store";
 import { byNewest } from "@/lib/progress";
-import { EDU_AREAS, todayStr, type EduNote } from "@/lib/types";
+import { EDU_AREAS, QUALITIES, todayStr, type EduNote } from "@/lib/types";
 
-// Tarbiya track: behavioural notes. edu_notes.points is grading and stays hidden (spec §10).
+// Tarbiya track: behavioural notes. The optional grade (التقدير) is the periodic «التربية
+// والسلوك» evaluation used by the rankings; the legacy edu_notes.points stays hidden (spec §10).
 export default function TarbiyaSection({ studentId, notes }: { studentId: string; notes: EduNote[] }) {
   const { showToast } = useApp();
   const list = [...notes].sort(byNewest((n) => n.record_date));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [area, setArea] = useState<string>(EDU_AREAS[0]);
   const [note, setNote] = useState("");
+  const [quality, setQuality] = useState("");
   const [date, setDate] = useState(todayStr());
   const [error, setError] = useState("");
 
   function reset() {
     setEditingId(null);
     setNote("");
+    setQuality("");
     setDate(todayStr());
     setError("");
   }
@@ -28,7 +31,15 @@ export default function TarbiyaSection({ studentId, notes }: { studentId: string
     if (!note.trim()) return setError("اكتب الملاحظة");
     await store.save(
       "edu_notes",
-      { id: editingId ?? newId(), student_id: studentId, area, note: note.trim(), record_date: date, deleted_at: null },
+      {
+        id: editingId ?? newId(),
+        student_id: studentId,
+        area,
+        note: note.trim(),
+        quality: quality || null,
+        record_date: date,
+        deleted_at: null,
+      },
       `ملاحظة تربوية: ${area}`
     );
     showToast(editingId ? "تم التعديل" : "تم تسجيل الملاحظة");
@@ -63,6 +74,15 @@ export default function TarbiyaSection({ studentId, notes }: { studentId: string
             <label>التاريخ</label>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
+          <div>
+            <label>التقدير (للترتيب)</label>
+            <select value={quality} onChange={(e) => setQuality(e.target.value)} aria-label="تقدير التربية والسلوك">
+              <option value="">بدون تقدير</option>
+              {QUALITIES.map((q) => (
+                <option key={q}>{q}</option>
+              ))}
+            </select>
+          </div>
           <div className="wide">
             <label>الملاحظة</label>
             <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="مثال: بادر إلى مساعدة زميله في المراجعة." />
@@ -85,6 +105,7 @@ export default function TarbiyaSection({ studentId, notes }: { studentId: string
               <div>
                 <b>{n.area}</b>
                 <span className="muted"> · {n.record_date}</span>
+                {n.quality && <span className="badge"> {n.quality}</span>}
                 <div className="small">{n.note}</div>
               </div>
               <div className="row-actions">
@@ -94,6 +115,7 @@ export default function TarbiyaSection({ studentId, notes }: { studentId: string
                     setEditingId(n.id);
                     setArea(n.area);
                     setNote(n.note);
+                    setQuality(n.quality ?? "");
                     setDate(n.record_date);
                   }}
                 >

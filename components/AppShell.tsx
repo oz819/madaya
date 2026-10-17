@@ -14,6 +14,7 @@ import { AppContext } from "@/components/AppContext";
 import Students from "@/components/sections/Students";
 import Talqeen from "@/components/sections/Talqeen";
 import Reports from "@/components/sections/Reports";
+import Ranking from "@/components/sections/Ranking";
 import Manage from "@/components/sections/Manage";
 import Trash from "@/components/sections/Trash";
 import ConfirmDialogHost from "@/components/ConfirmDialog";
@@ -23,12 +24,13 @@ import InstallHint from "@/components/InstallHint";
 import FilterBar from "@/components/FilterBar";
 import Toast, { useToast } from "@/components/Toast";
 
-type Page = "students" | "talqeen" | "reports" | "manage" | "trash";
+type Page = "students" | "talqeen" | "reports" | "ranking" | "manage" | "trash";
 
 const NAV: { id: Page; label: string }[] = [
   { id: "students", label: "👨‍🎓 الطلاب" },
   { id: "talqeen", label: "🎙️ التلقين" },
   { id: "reports", label: "📊 التقارير" },
+  { id: "ranking", label: "⭐ المتفوقون" },
 ];
 
 type CachedProfile = { userId: string; profile: Profile };
@@ -234,11 +236,12 @@ export default function AppShell() {
       <main>
         <div className="no-print">
           <InstallHint />
-          {((page === "students" && !view.studentId) || page === "talqeen" || page === "reports") && <FilterBar />}
+          {((page === "students" && !view.studentId) || page === "talqeen" || page === "reports" || page === "ranking") && <FilterBar />}
         </div>
         {page === "students" && <Students openId={view.studentId} onOpen={openStudent} onClose={closeStudent} />}
         {page === "talqeen" && <Talqeen />}
         {page === "reports" && <Reports />}
+        {page === "ranking" && <Ranking />}
         {page === "manage" && profile.role === "ADMIN" && <Manage />}
         {page === "trash" && profile.role === "ADMIN" && <Trash />}
       </main>

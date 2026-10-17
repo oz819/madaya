@@ -336,3 +336,39 @@ header .dates .gregorian{display:block;font-size:10.5px;opacity:.68;white-space:
 .lesson-show b{font-size:16px;color:var(--g2)}
 .lesson-card .small{margin:8px 0 0}
 @media(max-width:650px){.lesson-edit{grid-template-columns:1fr}}
+/* ⭐ المتفوقون */
+.ranking-tabs{margin:8px 0}
+.ranking-tabs .chip{cursor:pointer}
+.ranking-tabs .chip.active{background:var(--g);color:#fff}
+.weights{margin-top:14px;border-top:1px dashed var(--line);padding-top:10px}
+.weights h4{margin:0 0 8px}
+.weights-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.weight{display:flex;flex-direction:column;gap:4px;background:#f6faf8;border:1px solid var(--line);border-radius:12px;padding:8px 10px;font-size:13px;font-weight:600;color:var(--g2)}
+.weight-input{display:flex;align-items:center;gap:6px}
+.weight-input input{width:100%;text-align:center;font-size:16px}
+.weights-foot{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.podium{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px}
+.podium li{display:grid;grid-template-columns:40px 1fr auto auto;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#f6faf8;border:1px solid var(--line)}
+.podium li:nth-child(1){background:#fff7df;border-color:#ecd48f}
+.medal{font-size:24px;text-align:center;font-weight:800}
+.podium-name{font-size:16px;font-weight:700;text-align:right}
+.podium-score{font-size:18px;color:var(--g2)}
+.move{font-size:12px;font-weight:700;padding:2px 7px;border-radius:999px;white-space:nowrap}
+.move.up{background:#e7f6e6;color:var(--g)}
+.move.down{background:#fff0ee;color:var(--red)}
+.move.same{color:var(--muted)}
+.move.new{background:#edf3ff;color:var(--blue)}
+.rank-table td{vertical-align:top}
+.unranked li{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.activity-head{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%}
+.activity-row{flex-direction:column;align-items:stretch}
+.activity-roster{margin-top:8px}
+.roster-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.roster-grid .chip.on{background:var(--g);color:#fff}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:10px}
+.mini-chart{margin:0;background:#f6faf8;border:1px solid var(--line);border-radius:14px;padding:10px}
+.mini-chart figcaption{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--g2);margin-bottom:4px}
+.mini-chart svg{width:100%;height:auto;display:block;direction:ltr}
+.mini-chart .grid-line{stroke:#d9e3df;stroke-width:1}
+.mini-chart .axis-text{fill:var(--muted);font-size:10px}
+@media(max-width:650px){.podium li{grid-template-columns:34px 1fr auto auto;padding:8px}}

@@ -9,6 +9,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { useSyncExternalStore } from "react";
 import type { Database } from "@/lib/supabase/database.types";
 import type {
+  Activity,
   ArabicBook,
   ArabicEnrollment,
   ArabicEntry,
@@ -49,6 +50,7 @@ type TableRows = {
   edu_notes: EduNote;
   talqeen_sessions: TalqeenSession;
   circle_lessons: CircleLesson;
+  activities: Activity;
 };
 export type TableName = keyof TableRows;
 
@@ -60,7 +62,8 @@ export type OutboxTable =
   | "student_arabic_enrollments"
   | "arabic_entries"
   | "edu_notes"
-  | "circle_lessons";
+  | "circle_lessons"
+  | "activities";
 
 const TABLE_NAMES: TableName[] = [
   "circles",
@@ -75,6 +78,7 @@ const TABLE_NAMES: TableName[] = [
   "edu_notes",
   "talqeen_sessions",
   "circle_lessons",
+  "activities",
 ];
 
 // Pulled incrementally by updated_at, in dependency order (parents before children).
@@ -89,6 +93,7 @@ const SYNC_TABLES = [
   "edu_notes",
   "attendance",
   "circle_lessons",
+  "activities",
 ] as const;
 
 // Server-managed columns are never sent: triggers set them (spec §9).
@@ -764,6 +769,8 @@ class LocalStore {
           q = q.is("deleted_at", null).gte("session_date", since);
         } else if (table === "circle_lessons") {
           q = q.is("deleted_at", null).gte("lesson_date", since);
+        } else if (table === "activities") {
+          q = q.is("deleted_at", null).gte("activity_date", since);
         }
         const tiebreak = table === "attendance" ? "student_id" : table === "circle_lessons" ? "circle_id" : "id";
         const { data, error } = await q.order("updated_at").order(tiebreak).range(from, from + PAGE - 1);

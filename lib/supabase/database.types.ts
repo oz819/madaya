@@ -17,6 +17,96 @@ export type Database = {
   }
   public: {
     Tables: {
+      activities: {
+        Row: {
+          activity_date: string
+          circle_id: string | null
+          created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          edited_at: string
+          id: string
+          student_ids: string[]
+          teacher_id: string | null
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          activity_date: string
+          circle_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          edited_at?: string
+          id?: string
+          student_ids?: string[]
+          teacher_id?: string | null
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          activity_date?: string
+          circle_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          edited_at?: string
+          id?: string
+          student_ids?: string[]
+          teacher_id?: string | null
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activities_circle_id_fkey"
+            columns: ["circle_id"]
+            isOneToOne: false
+            referencedRelation: "circles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ranking_settings: {
+        Row: {
+          course_start: string | null
+          grades: Json
+          id: number
+          updated_at: string
+          updated_by: string | null
+          week_start: number
+          weights: Json
+        }
+        Insert: {
+          course_start?: string | null
+          grades?: Json
+          id?: number
+          updated_at?: string
+          updated_by?: string | null
+          week_start?: number
+          weights?: Json
+        }
+        Update: {
+          course_start?: string | null
+          grades?: Json
+          id?: number
+          updated_at?: string
+          updated_by?: string | null
+          week_start?: number
+          weights?: Json
+        }
+        Relationships: []
+      }
       arabic_books: {
         Row: {
           active: boolean
@@ -715,6 +805,7 @@ export type Database = {
           id: string
           note: string
           points: number
+          quality: string | null
           record_date: string
           student_id: string
           teacher_id: string | null
@@ -730,6 +821,7 @@ export type Database = {
           id?: string
           note: string
           points?: number
+          quality?: string | null
           record_date?: string
           student_id: string
           teacher_id?: string | null
@@ -745,6 +837,7 @@ export type Database = {
           id?: string
           note?: string
           points?: number
+          quality?: string | null
           record_date?: string
           student_id?: string
           teacher_id?: string | null
