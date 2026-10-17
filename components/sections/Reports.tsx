@@ -16,12 +16,13 @@ import {
   type ArabicEntry,
   type Attendance,
   type AttendanceStatus,
+  type CircleLesson,
   type QuranEntry,
   type QuranTrack,
   type Student,
 } from "@/lib/types";
 
-type TrackKey = QuranTrack | "ARABIC" | "TARBIYA" | "ATTENDANCE";
+type TrackKey = QuranTrack | "ARABIC" | "TARBIYA" | "ATTENDANCE" | "LESSON";
 const TRACKS: { id: TrackKey; label: string }[] = [
   { id: "HIFZ", label: "الحفظ" },
   { id: "TILAWA", label: "التلاوة" },
@@ -30,11 +31,19 @@ const TRACKS: { id: TrackKey; label: string }[] = [
   { id: "ARABIC", label: "العربية" },
   { id: "TARBIYA", label: "التربية" },
   { id: "ATTENDANCE", label: "الحضور" },
+  { id: "LESSON", label: "الدرس" },
 ];
 
 type Period = "day" | "range" | "month";
 type TarbiyaRow = { id: string; student_id: string; record_date: string; area: string; note: string };
-type ReportData = { quran: QuranEntry[]; arabic: ArabicEntry[]; tarbiya: TarbiyaRow[]; attendance: Attendance[] };
+type ReportData = {
+  quran: QuranEntry[];
+  arabic: ArabicEntry[];
+  tarbiya: TarbiyaRow[];
+  attendance: Attendance[];
+  /** The halaqat's lessons (درس اليوم); shown for students present that day. */
+  lessons: CircleLesson[];
+};
 
 type Cell = { text: string; empty: boolean };
 type Row = { student: Student; cells: Partial<Record<TrackKey, Cell>> };
@@ -60,7 +69,7 @@ export default function Reports() {
   const [from, setFrom] = useState(addDays(todayStr(), -6));
   const [to, setTo] = useState(todayStr());
   const [month, setMonth] = useState(todayStr().slice(0, 7));
-  const [tracks, setTracks] = useState<Set<TrackKey>>(new Set(["HIFZ", "TILAWA", "MURAJAA", "TALQEEN", "ATTENDANCE"]));
+  const [tracks, setTracks] = useState<Set<TrackKey>>(new Set(["HIFZ", "TILAWA", "MURAJAA", "TALQEEN", "ATTENDANCE", "LESSON"]));
   const [data, setData] = useState<ReportData | null>(null);
   const [offline, setOffline] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -86,6 +95,7 @@ export default function Reports() {
         arabic: s.all("arabic_entries").filter((e) => !e.deleted_at && e.entry_date >= pFrom && e.entry_date <= pTo),
         tarbiya: s.all("edu_notes").filter((n) => !n.deleted_at && n.record_date >= pFrom && n.record_date <= pTo),
         attendance: s.all("attendance").filter((a) => !a.deleted_at && a.att_date >= pFrom && a.att_date <= pTo),
+        lessons: s.all("circle_lessons").filter((l) => !l.deleted_at && l.lesson_date >= pFrom && l.lesson_date <= pTo),
       });
       if (!navigator.onLine) {
         if (!cancelled) {
@@ -107,7 +117,8 @@ export default function Reports() {
         setOffline(true);
         if (!/fetch|network/i.test(err.message)) setError(err.message);
       } else {
-        setData(res as unknown as ReportData);
+        const r = res as unknown as ReportData;
+        setData({ ...r, lessons: r.lessons ?? [] });
         setOffline(false);
       }
       setLoading(false);
@@ -125,6 +136,7 @@ export default function Reports() {
     arabic: data.arabic.filter((e) => studentIds.has(e.student_id)),
     tarbiya: data.tarbiya.filter((n) => studentIds.has(n.student_id)),
     attendance: data.attendance.filter((a) => studentIds.has(a.student_id)),
+    lessons: data.lessons,
   };
   const chosen = TRACKS.filter((t) => tracks.has(t.id));
   const rows = filtered ? buildRows(students, filtered, chosen.map((t) => t.id), period, mushaf, books) : [];
@@ -132,7 +144,8 @@ export default function Reports() {
     scope === "student" ? (s.get("students", studentId)?.name ?? "—") : filter === "all" ? "جميع الحلقات" : filterName;
   const periodLabel = period === "day" ? pFrom : period === "month" ? month : `${pFrom} ← ${pTo}`;
   const whatsapp = buildWhatsApp(rows, chosen, scopeLabel, periodLabel);
-  const timeline = scope === "student" && filtered ? buildTimeline(filtered, chosen.map((t) => t.id), mushaf, books) : null;
+  const timeline =
+    scope === "student" && filtered ? buildTimeline(filtered, chosen.map((t) => t.id), mushaf, books, s.get("students", studentId)) : null;
 
   function copy() {
     navigator.clipboard?.writeText(whatsapp);
@@ -339,12 +352,16 @@ function buildRows(
   const arabic = groupBy(d.arabic, (e) => e.student_id);
   const tarbiya = groupBy(d.tarbiya, (n) => n.student_id);
   const att = groupBy(d.attendance, (a) => a.student_id);
+  const lessons = groupBy(d.lessons, (l) => l.circle_id);
   const empty = (text = period === "day" ? "لم يُسجَّل" : "—"): Cell => ({ text, empty: true });
 
   return students.map((student) => {
     const cells: Row["cells"] = {};
     for (const t of tracks) {
-      if (t === "ATTENDANCE") {
+      if (t === "LESSON") {
+        const taken = attendedLessons(student, att.get(student.id), lessons.get(student.circle_id));
+        cells[t] = taken.length ? { text: taken.map((l) => l.title).join("، "), empty: false } : empty("—");
+      } else if (t === "ATTENDANCE") {
         const list = att.get(student.id) ?? [];
         if (period === "day") {
           cells[t] = list[0] ? { text: ATTENDANCE_LABEL[list[0].status as AttendanceStatus], empty: false } : empty();
@@ -399,7 +416,13 @@ function buildRows(
   });
 }
 
-function buildTimeline(d: ReportData, tracks: TrackKey[], mushaf: Mushaf, books: Map<string, ArabicBook>) {
+// The lessons of the student's halaqa on the days they were present or late.
+function attendedLessons(student: Student, att: Attendance[] | undefined, lessons: CircleLesson[] | undefined): CircleLesson[] {
+  const days = new Set((att ?? []).filter((a) => a.status === "PRESENT" || a.status === "LATE").map((a) => a.att_date));
+  return (lessons ?? []).filter((l) => days.has(l.lesson_date)).sort((a, b) => a.lesson_date.localeCompare(b.lesson_date));
+}
+
+function buildTimeline(d: ReportData, tracks: TrackKey[], mushaf: Mushaf, books: Map<string, ArabicBook>, student?: Student) {
   const items: { date: string; order: string; track: string; text: string }[] = [];
   for (const e of d.quran) {
     if (!tracks.includes(e.track as TrackKey)) continue;
@@ -426,16 +449,25 @@ function buildTimeline(d: ReportData, tracks: TrackKey[], mushaf: Mushaf, books:
   if (tracks.includes("ATTENDANCE")) {
     for (const a of d.attendance) items.push({ date: a.att_date, order: "", track: "الحضور", text: ATTENDANCE_LABEL[a.status as AttendanceStatus] });
   }
+  if (tracks.includes("LESSON") && student) {
+    const mine = d.lessons.filter((l) => l.circle_id === student.circle_id);
+    for (const l of attendedLessons(student, d.attendance, mine)) items.push({ date: l.lesson_date, order: "~", track: "الدرس", text: l.title });
+  }
   return items.sort((a, b) => a.date.localeCompare(b.date) || a.order.localeCompare(b.order));
 }
 
 function buildWhatsApp(rows: Row[], tracks: { id: TrackKey; label: string }[], scope: string, period: string): string {
+  // Per student: "- name" then one "label: value" line per recorded track, e.g.
+  //   - أحمد
+  //   الحفظ: الحشر 10–16 (جيد جدًا)
+  //   الحضور: حاضر
+  //   الدرس: أحكام الوضوء
   let out = `📖 تقرير حلقات القرآن — ${period}\n👥 ${scope}\n👤 الطلاب: ${rows.length}\n`;
-  for (const r of rows) {
-    out += `\n• ${r.student.name}`;
+  for (const [i, r] of rows.entries()) {
+    out += `\n${i ? "\n" : ""}- ${r.student.name}`;
     for (const t of tracks) {
       const c = r.cells[t.id];
-      if (c && !c.empty) out += `\n   ${t.label}: ${c.text}`;
+      if (c && !c.empty) out += `\n${t.label}: ${c.text}`;
     }
     if (tracks.every((t) => r.cells[t.id]?.empty ?? true)) out += ": لم يُسجَّل";
   }

@@ -4,6 +4,7 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "@/components/AppContext";
 import StudentCard from "@/components/StudentCard";
 import { useScope } from "@/components/FilterBar";
+import LessonCard from "@/components/LessonCard";
 import { matchesName } from "@/lib/arabic";
 import { usePersistentState } from "@/lib/usePersistentState";
 import { store, newId, useStore } from "@/lib/offline/store";
@@ -102,6 +103,8 @@ export default function Students({
         <StatTile icon="✅" label="حاضرون اليوم" value={presentToday} of={active.length} />
         <StatTile icon="📖" label="سُجّل لهم اليوم" value={recordedToday} of={active.length} />
       </div>
+
+      <LessonCard circles={scopedCircles} />
 
       <Insights students={active} open={open} />
 
