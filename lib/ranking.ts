@@ -35,6 +35,10 @@ export type RankingSettings = {
   /** First day of the week, as Date.getDay(): 0 Sunday … 6 Saturday. */
   weekStart: number;
   courseStart: string | null;
+  /** تنبيه الغياب: flag a student after this many absences in a row. */
+  absenceThreshold: number;
+  /** The admin's wording of the message to the family; null for the default. */
+  absenceMessage: string | null;
 };
 
 export const DEFAULT_SETTINGS: RankingSettings = {
@@ -42,6 +46,8 @@ export const DEFAULT_SETTINGS: RankingSettings = {
   grades: { ممتاز: 100, "جيد جدًا": 85, جيد: 70, تمكين: 60, إعادة: 40 },
   weekStart: 6,
   courseStart: null,
+  absenceThreshold: 3,
+  absenceMessage: null,
 };
 
 export const WEEK_DAYS = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];

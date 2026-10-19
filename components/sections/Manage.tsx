@@ -6,6 +6,7 @@ import { confirmDialog } from "@/components/ConfirmDialog";
 import { adminSoftDelete } from "@/lib/adminDelete";
 import { PROFILE_COLUMNS, store, useStore } from "@/lib/offline/store";
 import { SECTIONS, SECTION_LABEL, effectiveFilter, filterLabel, filterOptions } from "@/lib/filter";
+import CenterSettings from "@/components/CenterSettings";
 
 // Admin-only actions (spec §5.4). These need a connection: they write straight to Supabase
 // (RLS re-checks is_admin()) and then refresh the local copy.
@@ -19,6 +20,7 @@ export default function Manage() {
       <Teachers />
       <Halaqat />
       <ArabicBooks />
+      <CenterSettings />
     </section>
   );
 }

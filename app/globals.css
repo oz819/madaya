@@ -413,3 +413,7 @@ button.juz-cell{padding:0;cursor:pointer}
 .inline-phone{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}
 .inline-phone input{flex:1;min-width:150px;max-width:220px}
 .msg-preview{white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;background:#f6faf8;border:1px solid var(--line);border-radius:10px;padding:10px;margin:8px 0 0;font-size:.92em;line-height:1.7}
+
+/* ---- Phase 6: absence alerts ---- */
+.absence-alerts .insight-list li{gap:8px;cursor:default}
+.absent-name{cursor:pointer;flex:1}

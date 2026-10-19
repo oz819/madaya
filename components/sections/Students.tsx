@@ -6,13 +6,14 @@ import StudentCard from "@/components/StudentCard";
 import { useScope } from "@/components/FilterBar";
 import LessonCard from "@/components/LessonCard";
 import SendReports from "@/components/SendReports";
+import AbsenceAlerts from "@/components/AbsenceAlerts";
 import { matchesName } from "@/lib/arabic";
 import { normalizePhone } from "@/lib/guardian";
 import { usePersistentState } from "@/lib/usePersistentState";
 import { store, newId, useStore } from "@/lib/offline/store";
 import { latestOfTrack } from "@/lib/progress";
 import { entryRange, type Mushaf, type QuranRange } from "@/lib/quran";
-import { ATTENDANCE_LABEL, todayStr, type ArabicEnrollment, type Attendance, type AttendanceStatus, type Circle, type QuranEntry, type Student } from "@/lib/types";
+import { ATTENDANCE_LABEL, todayStr, type ArabicEnrollment, type AttendanceStatus, type Circle, type QuranEntry, type Student } from "@/lib/types";
 
 const RECENT_KEY = "recentStudents";
 
@@ -408,51 +409,28 @@ function RollCall({ circles, onClose, onDone }: { circles: Circle[]; onClose: ()
   );
 }
 
-const ABSENCE_STREAK = 3;
-
 // Two on-device insights from the locally synced window: students absent on their last few
-// recorded days, and this month's top memorizers by distinct ayahs.
+// recorded days (تنبيه الغياب, with a message to the family), and this month's top memorizers.
 function Insights({ students, open }: { students: Student[]; open: (id: string) => void }) {
   const s = useStore();
   const { mushaf } = useApp();
-  const attBy = s.byStudent("attendance");
   const quranBy = s.byStudent("quran_entries");
   const month = todayStr().slice(0, 7);
 
-  const { absent, stars } = useMemo(
-    () => ({
-      absent: students
-        .map((st) => ({ st, n: absenceStreak(attBy.get(st.id)) }))
-        .filter((x) => x.n >= ABSENCE_STREAK)
-        .sort((a, b) => b.n - a.n),
-      stars: students
+  const stars = useMemo(
+    () =>
+      students
         .map((st) => ({ st, ayahs: monthHifz(mushaf, quranBy.get(st.id), month) }))
         .filter((x) => x.ayahs > 0)
         .sort((a, b) => b.ayahs - a.ayahs)
         .slice(0, 5),
-    }),
-    [students, attBy, quranBy, mushaf, month]
+    [students, quranBy, mushaf, month]
   );
-
-  if (!absent.length && !stars.length) return null;
   const medals = ["🥇", "🥈", "🥉"];
 
   return (
     <div className="insights">
-      {absent.length > 0 && (
-        <div className="card insight warn-card">
-          <h3>⚠️ يحتاجون متابعة</h3>
-          <p className="muted">غابوا آخر {ABSENCE_STREAK} أيام مسجّلة أو أكثر</p>
-          <ul className="insight-list">
-            {absent.map(({ st, n }) => (
-              <li key={st.id} onClick={() => open(st.id)}>
-                <span>{st.name}</span>
-                <span className="badge redo">{n} أيام</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <AbsenceAlerts students={students} open={open} />
       {stars.length > 0 && (
         <div className="card insight star-card">
           <h3>🏆 نجوم الحفظ هذا الشهر</h3>
@@ -471,16 +449,6 @@ function Insights({ students, open }: { students: Student[]; open: (id: string) 
       )}
     </div>
   );
-}
-
-function absenceStreak(rows: Attendance[] | undefined): number {
-  const sorted = [...(rows ?? [])].sort((a, b) => b.att_date.localeCompare(a.att_date));
-  let n = 0;
-  for (const r of sorted) {
-    if (r.status !== "ABSENT") break;
-    n++;
-  }
-  return n;
 }
 
 function monthHifz(mushaf: Mushaf, entries: QuranEntry[] | undefined, month: string): number {

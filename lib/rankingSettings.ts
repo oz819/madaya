@@ -18,7 +18,14 @@ function fromRow(r: Row): RankingSettings {
   const weights = Object.fromEntries(ITEMS.map((i) => [i.key, Number(w[i.key]) || 0])) as Weights;
   const g = (r.grades ?? {}) as Record<string, unknown>;
   const grades = Object.fromEntries(Object.entries(g).map(([k, v]) => [k, Number(v)]));
-  return { weights, grades, weekStart: r.week_start, courseStart: r.course_start };
+  return {
+    weights,
+    grades,
+    weekStart: r.week_start,
+    courseStart: r.course_start,
+    absenceThreshold: r.absence_threshold ?? DEFAULT_SETTINGS.absenceThreshold,
+    absenceMessage: r.absence_message ?? null,
+  };
 }
 
 function readLocal(): RankingSettings | null {
@@ -76,7 +83,14 @@ class SettingsStore {
     if (!navigator.onLine) return "حفظ الإعدادات يحتاج اتصالًا بالإنترنت.";
     const { data, error } = await sb
       .from("ranking_settings")
-      .update({ weights: next.weights, grades: next.grades, week_start: next.weekStart, course_start: next.courseStart })
+      .update({
+        weights: next.weights,
+        grades: next.grades,
+        week_start: next.weekStart,
+        course_start: next.courseStart,
+        absence_threshold: next.absenceThreshold,
+        absence_message: next.absenceMessage,
+      })
       .eq("id", 1)
       .select("*")
       .maybeSingle();

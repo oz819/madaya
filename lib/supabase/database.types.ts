@@ -79,6 +79,8 @@ export type Database = {
       }
       ranking_settings: {
         Row: {
+          absence_message: string | null
+          absence_threshold: number
           course_start: string | null
           grades: Json
           id: number
@@ -88,6 +90,8 @@ export type Database = {
           weights: Json
         }
         Insert: {
+          absence_message?: string | null
+          absence_threshold?: number
           course_start?: string | null
           grades?: Json
           id?: number
@@ -97,6 +101,8 @@ export type Database = {
           weights?: Json
         }
         Update: {
+          absence_message?: string | null
+          absence_threshold?: number
           course_start?: string | null
           grades?: Json
           id?: number
