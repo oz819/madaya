@@ -8,14 +8,15 @@ import QuranTrackSection from "@/components/card/QuranTrackSection";
 import ArabicSection from "@/components/card/ArabicSection";
 import TarbiyaSection from "@/components/card/TarbiyaSection";
 import GuardianBox from "@/components/card/GuardianBox";
+import MemorizationMap, { ReviewSuggestions } from "@/components/card/MemorizationMap";
 import SlidingIndicator from "@/components/SlidingIndicator";
 import { store, useStore } from "@/lib/offline/store";
 import { byNewest, studentProgress } from "@/lib/progress";
 import { normalizePhone } from "@/lib/guardian";
-import { entryRange } from "@/lib/quran";
+import { entryRange, type QuranRange } from "@/lib/quran";
 import { ATTENDANCE_LABEL, QUALITIES, todayStr, type AttendanceStatus, type QuranEntry } from "@/lib/types";
 
-type Section = "HIFZ" | "TILAWA" | "MURAJAA" | "TALQEEN" | "ARABIC" | "TARBIYA";
+type Section = "HIFZ" | "TILAWA" | "MURAJAA" | "TALQEEN" | "ARABIC" | "TARBIYA" | "MAP";
 
 const SECTIONS: { id: Section; label: string }[] = [
   { id: "HIFZ", label: "الحفظ" },
@@ -24,6 +25,7 @@ const SECTIONS: { id: Section; label: string }[] = [
   { id: "TALQEEN", label: "التلقين" },
   { id: "ARABIC", label: "العربية" },
   { id: "TARBIYA", label: "التربية" },
+  { id: "MAP", label: "🗺️ الخريطة" },
 ];
 
 const STATUSES: AttendanceStatus[] = ["PRESENT", "LATE", "EXCUSED", "ABSENT"];
@@ -34,6 +36,8 @@ export default function StudentCard({ studentId, onClose }: { studentId: string;
   const [section, setSection] = useState<Section>("HIFZ");
   const [editing, setEditing] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  // A suggested review chosen from the map: opens the review form on that range.
+  const [prefill, setPrefill] = useState<{ range: QuranRange; n: number } | null>(null);
 
   const student = s.get("students", studentId);
   if (!student) {
@@ -62,6 +66,11 @@ export default function StudentCard({ studentId, onClose }: { studentId: string;
   const unsynced = s.unsyncedStudents().has(studentId);
   const circle = s.get("circles", student.circle_id);
   const status = att && !att.deleted_at ? (att.status as AttendanceStatus) : null;
+
+  function review(range: QuranRange) {
+    setPrefill({ range, n: (prefill?.n ?? 0) + 1 });
+    setSection("MURAJAA");
+  }
 
   async function loadHistory() {
     setLoadingHistory(true);
@@ -130,16 +139,36 @@ export default function StudentCard({ studentId, onClose }: { studentId: string;
       <div className="tabs sliding">
         <SlidingIndicator active={section} />
         {SECTIONS.map((sec) => (
-          <button key={sec.id} className={section === sec.id ? "active" : ""} onClick={() => setSection(sec.id)}>
+          <button
+            key={sec.id}
+            className={section === sec.id ? "active" : ""}
+            onClick={() => {
+              setPrefill(null);
+              setSection(sec.id);
+            }}
+          >
             {sec.label}
           </button>
         ))}
       </div>
 
       <div className="card">
-        {(section === "HIFZ" || section === "TILAWA" || section === "MURAJAA") && (
-          <QuranTrackSection key={`${studentId}-${section}`} studentId={studentId} track={section} entries={quran} />
+        {section === "MURAJAA" && !prefill && (
+          <details className="review-box">
+            <summary>🔁 مراجعة اليوم المقترحة</summary>
+            <ReviewSuggestions entries={quran} onReview={review} />
+          </details>
         )}
+        {(section === "HIFZ" || section === "TILAWA" || section === "MURAJAA") && (
+          <QuranTrackSection
+            key={`${studentId}-${section}-${section === "MURAJAA" ? (prefill?.n ?? 0) : 0}`}
+            studentId={studentId}
+            track={section}
+            entries={quran}
+            prefill={section === "MURAJAA" ? prefill?.range : null}
+          />
+        )}
+        {section === "MAP" && <MemorizationMap studentId={studentId} entries={quran} onReview={review} />}
         {section === "TALQEEN" && <TalqeenList entries={quran.filter((e) => e.track === "TALQEEN")} />}
         {section === "ARABIC" && <ArabicSection key={studentId} studentId={studentId} enrollments={enrollments} entries={arabic} />}
         {section === "TARBIYA" && <TarbiyaSection key={studentId} studentId={studentId} notes={edu} />}

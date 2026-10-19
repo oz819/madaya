@@ -1172,6 +1172,7 @@ export type Database = {
           name: string
           updated_at: string
           updated_by: string | null
+          weekly_goal_ayahs: number | null
         }
         Insert: {
           active?: boolean
@@ -1186,6 +1187,7 @@ export type Database = {
           name: string
           updated_at?: string
           updated_by?: string | null
+          weekly_goal_ayahs?: number | null
         }
         Update: {
           active?: boolean
@@ -1200,6 +1202,7 @@ export type Database = {
           name?: string
           updated_at?: string
           updated_by?: string | null
+          weekly_goal_ayahs?: number | null
         }
         Relationships: [
           {

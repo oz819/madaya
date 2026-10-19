@@ -22,17 +22,20 @@ export default function QuranTrackSection({
   studentId,
   track,
   entries,
+  prefill,
 }: {
   studentId: string;
   track: Exclude<QuranTrack, "TALQEEN">;
   entries: QuranEntry[];
+  /** A range to start the form on (e.g. a suggested review) instead of the usual guess. */
+  prefill?: QuranRange | null;
 }) {
   const { mushaf, showToast, profile } = useApp();
   const mine = entries.filter((e) => e.track === track).sort(byNewest((e) => e.entry_date));
   const last = latestOfTrack(entries, track);
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [range, setRange] = useState<QuranRange>(() => suggest(mushaf, track, last));
+  const [range, setRange] = useState<QuranRange>(() => prefill ?? suggest(mushaf, track, last));
   const [date, setDate] = useState(todayStr());
   const [quality, setQuality] = useState("");
   const [notes, setNotes] = useState("");

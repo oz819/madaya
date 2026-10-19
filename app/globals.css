@@ -417,3 +417,20 @@ button.juz-cell{padding:0;cursor:pointer}
 /* ---- Phase 6: absence alerts ---- */
 .absence-alerts .insight-list li{gap:8px;cursor:default}
 .absent-name{cursor:pointer;flex:1}
+
+/* ---- Phase 7: memorization map, review suggestions, weekly goal ---- */
+.map-stats{grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.map-stats .stat{background:#f6faf8;border:1px solid var(--line);border-radius:12px;padding:10px}
+.map-stats .stat b{display:block;font-size:1.25rem;margin:2px 0}
+.memo-map h4{margin:16px 0 8px}
+.juz-detail{margin-top:10px;padding:10px;border-radius:12px;background:#f6faf8;border:1px solid var(--line)}
+.juz-detail ul{list-style:none;margin:6px 0 0;padding:0}
+.juz-detail li{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line)}
+.juz-detail li:last-child{border-bottom:0}
+.goal-box{margin:6px 0;padding:10px;border-radius:12px;background:#fffaf0;border:1px solid #efdfb8}
+.review-list{list-style:none;margin:0;padding:0}
+.review-list li{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--line)}
+.review-list li:last-child{border-bottom:0}
+.review-box{margin-bottom:12px;padding:8px 10px;border-radius:12px;background:#f6faf8;border:1px solid var(--line)}
+.review-box summary{cursor:pointer;font-weight:700;color:var(--g2)}
+@media (max-width:420px){.map-stats{grid-template-columns:1fr 1fr}}
