@@ -18,6 +18,7 @@ import type {
   Circle,
   CircleLesson,
   EduNote,
+  GuardianLink,
   QuranEntry,
   Student,
   Surah,
@@ -51,6 +52,7 @@ type TableRows = {
   talqeen_sessions: TalqeenSession;
   circle_lessons: CircleLesson;
   activities: Activity;
+  guardian_links: GuardianLink;
 };
 export type TableName = keyof TableRows;
 
@@ -79,6 +81,7 @@ const TABLE_NAMES: TableName[] = [
   "talqeen_sessions",
   "circle_lessons",
   "activities",
+  "guardian_links",
 ];
 
 // Pulled incrementally by updated_at, in dependency order (parents before children).
@@ -94,6 +97,7 @@ const SYNC_TABLES = [
   "attendance",
   "circle_lessons",
   "activities",
+  "guardian_links",
 ] as const;
 
 // Server-managed columns are never sent: triggers set them (spec §9).
@@ -111,6 +115,7 @@ const PULL_OVERLAP_MS = 2 * 60 * 1000;
 export function keyOf(table: TableName, row: Record<string, unknown>): string {
   if (table === "attendance") return `${row.student_id}|${row.att_date}`;
   if (table === "circle_lessons") return `${row.circle_id}|${row.lesson_date}`;
+  if (table === "guardian_links") return String(row.student_id);
   if (table === "quran_surahs") return String(row.surah_no);
   return String(row.id);
 }
@@ -772,7 +777,8 @@ class LocalStore {
         } else if (table === "activities") {
           q = q.is("deleted_at", null).gte("activity_date", since);
         }
-        const tiebreak = table === "attendance" ? "student_id" : table === "circle_lessons" ? "circle_id" : "id";
+        const tiebreak =
+          table === "attendance" || table === "guardian_links" ? "student_id" : table === "circle_lessons" ? "circle_id" : "id";
         const { data, error } = await q.order("updated_at").order(tiebreak).range(from, from + PAGE - 1);
         if (error) throw new Error(error.message);
         const rows = (data ?? []) as TableRows[typeof table][];

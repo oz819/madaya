@@ -868,6 +868,33 @@ export type Database = {
           },
         ]
       }
+      guardian_links: {
+        Row: {
+          created_at: string
+          last_opened_at: string | null
+          open_count: number
+          student_id: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          last_opened_at?: string | null
+          open_count?: number
+          student_id: string
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          last_opened_at?: string | null
+          open_count?: number
+          student_id?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           active: boolean
@@ -1094,6 +1121,8 @@ export type Database = {
           deleted_at: string | null
           deleted_by: string | null
           edited_at: string
+          guardian_name: string | null
+          guardian_phone: string | null
           id: string
           name: string
           updated_at: string
@@ -1106,6 +1135,8 @@ export type Database = {
           deleted_at?: string | null
           deleted_by?: string | null
           edited_at?: string
+          guardian_name?: string | null
+          guardian_phone?: string | null
           id?: string
           name: string
           updated_at?: string
@@ -1118,6 +1149,8 @@ export type Database = {
           deleted_at?: string | null
           deleted_by?: string | null
           edited_at?: string
+          guardian_name?: string | null
+          guardian_phone?: string | null
           id?: string
           name?: string
           updated_at?: string
@@ -1348,6 +1381,7 @@ export type Database = {
         }[]
       }
       ayahs_before: { Args: { p_surah_no: number }; Returns: number }
+      guardian_view: { Args: { p_token: string }; Returns: Json }
       report_data: {
         Args: {
           p_circle_id?: string
@@ -1357,6 +1391,7 @@ export type Database = {
         }
         Returns: Json
       }
+      rotate_guardian_link: { Args: { p_student_id: string }; Returns: string }
       save_talqeen_session: {
         Args: { p_entries: Json; p_session: Json }
         Returns: undefined

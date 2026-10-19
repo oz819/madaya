@@ -37,6 +37,12 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
+  // Public pages for families, open whether signed in or not: a student's page by its private
+  // link, the registration form and the honor board.
+  if (/^\/(p\/|register|honor)/.test(pathname)) {
+    return supabaseResponse;
+  }
+
   // Reachable without a session; a signed-in visitor is sent to the app instead.
   const isSignedOutRoute = pathname.startsWith("/login") || pathname.startsWith("/forgot-password");
 

@@ -372,3 +372,28 @@ header .dates .gregorian{display:block;font-size:10.5px;opacity:.68;white-space:
 .mini-chart .grid-line{stroke:#d9e3df;stroke-width:1}
 .mini-chart .axis-text{fill:var(--muted);font-size:10px}
 @media(max-width:650px){.podium li{grid-template-columns:34px 1fr auto auto;padding:8px}}
+
+/* ---- Phase 4: guardian link + the family's page ---- */
+a.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:10px;padding:10px 14px;background:var(--g);color:#fff;font-weight:700;text-decoration:none;font-size:inherit}
+a.btn.secondary{background:#e8efeb;color:var(--g2)}
+a.btn.small{padding:6px 10px;font-size:.9em}
+.guardian-box{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-top:12px;padding:10px 12px;border-radius:12px;background:#f6faf8;border:1px dashed var(--line)}
+.guardian-box .phone{display:inline-block;margin-inline-start:8px;font-weight:600;color:var(--muted);unicode-bidi:isolate}
+.guardian{max-width:720px;margin:0 auto;padding:14px 16px 40px}
+.guardian-brand{display:flex;align-items:center;gap:12px;margin:6px 0 4px}
+.guardian-brand h1{font-family:var(--font-reem-kufi),Tahoma,sans-serif;font-size:1.25rem;margin:0;color:var(--g2)}
+.guardian-head h2{margin:0 0 2px;font-family:var(--font-reem-kufi),Tahoma,sans-serif}
+.guardian-stats{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.guardian-stats .stat b{display:block;font-size:1.5rem;margin:4px 0}
+.guardian-days{list-style:none;margin:0;padding:0}
+.guardian-days li{padding:10px 0;border-bottom:1px solid var(--line);line-height:1.8}
+.guardian-days li:last-child{border-bottom:0}
+.day-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.juz-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;direction:rtl}
+.juz-cell{display:flex;align-items:center;justify-content:center;aspect-ratio:1;border-radius:8px;background:#eef2f0;color:var(--muted);font-weight:700;border:1px solid var(--line);position:relative;overflow:hidden}
+.juz-cell.part{background:linear-gradient(0deg,#cfe6dc var(--fill,50%),#eef2f0 var(--fill,50%));color:var(--g2)}
+.juz-cell.full{background:var(--g);color:#fff;border-color:var(--g)}
+@media (min-width:560px){.juz-grid{grid-template-columns:repeat(10,1fr)}}
+.juz-cell.sel{outline:3px solid var(--gold);outline-offset:1px}
+button.juz-cell{padding:0;cursor:pointer}
+.juz-cell.part{border-color:#8fc2ab}

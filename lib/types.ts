@@ -24,6 +24,7 @@ export type EduNote = Tables<"edu_notes">;
 export type TalqeenSession = Tables<"talqeen_sessions">;
 export type CircleLesson = Tables<"circle_lessons">;
 export type Activity = Tables<"activities">;
+export type GuardianLink = Tables<"guardian_links">;
 
 export type QuranTrack = "HIFZ" | "TILAWA" | "MURAJAA" | "TALQEEN";
 

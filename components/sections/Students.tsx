@@ -6,6 +6,7 @@ import StudentCard from "@/components/StudentCard";
 import { useScope } from "@/components/FilterBar";
 import LessonCard from "@/components/LessonCard";
 import { matchesName } from "@/lib/arabic";
+import { normalizePhone } from "@/lib/guardian";
 import { usePersistentState } from "@/lib/usePersistentState";
 import { store, newId, useStore } from "@/lib/offline/store";
 import { latestOfTrack } from "@/lib/progress";
@@ -235,12 +236,19 @@ function AddStudent({ defaultCircleId, onAdded }: { defaultCircleId: string; onA
   // Starts on the circle the list is filtered to, if any.
   const [circleId, setCircleId] = useState(circles.some((c) => c.id === defaultCircleId) ? defaultCircleId : (circles[0]?.id ?? ""));
   const [bookId, setBookId] = useState("");
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
 
   async function add() {
     if (!name.trim() || !circleId) return setError("أدخل الاسم واختر الحلقة");
+    const guardianPhone = phone.trim() ? normalizePhone(phone) : null;
+    if (phone.trim() && !guardianPhone) return setError("رقم ولي الأمر غير صحيح — اكتبه مثل 0912345678");
     const id = newId();
-    await store.save("students", { id, name: name.trim(), circle_id: circleId, active: true }, `إضافة طالب: ${name.trim()}`);
+    await store.save(
+      "students",
+      { id, name: name.trim(), circle_id: circleId, active: true, guardian_phone: guardianPhone },
+      `إضافة طالب: ${name.trim()}`
+    );
     if (bookId) {
       await store.save(
         "student_arabic_enrollments",
@@ -279,6 +287,10 @@ function AddStudent({ defaultCircleId, onAdded }: { defaultCircleId: string; onA
             </option>
           ))}
         </select>
+      </div>
+      <div>
+        <label>رقم واتساب ولي الأمر (اختياري)</label>
+        <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" dir="ltr" inputMode="tel" placeholder="0912345678" />
       </div>
       <div style={{ alignSelf: "end" }}>
         <button onClick={add}>حفظ الطالب</button>

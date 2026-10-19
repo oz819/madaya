@@ -7,9 +7,11 @@ import { adminSoftDelete } from "@/lib/adminDelete";
 import QuranTrackSection from "@/components/card/QuranTrackSection";
 import ArabicSection from "@/components/card/ArabicSection";
 import TarbiyaSection from "@/components/card/TarbiyaSection";
+import GuardianBox from "@/components/card/GuardianBox";
 import SlidingIndicator from "@/components/SlidingIndicator";
 import { store, useStore } from "@/lib/offline/store";
 import { byNewest, studentProgress } from "@/lib/progress";
+import { normalizePhone } from "@/lib/guardian";
 import { entryRange } from "@/lib/quran";
 import { ATTENDANCE_LABEL, QUALITIES, todayStr, type AttendanceStatus, type QuranEntry } from "@/lib/types";
 
@@ -121,6 +123,8 @@ export default function StudentCard({ studentId, onClose }: { studentId: string;
           />
           <Pos label="آخر ملاحظة تربوية" value={p.lastTarbiya ?? null} />
         </div>
+
+        <GuardianBox studentId={studentId} onEdit={() => setEditing(true)} />
       </div>
 
       <div className="tabs sliding">
@@ -252,11 +256,20 @@ function EditStudent({
   const student = s.get("students", studentId)!;
   const [name, setName] = useState(student.name);
   const [circleId, setCircleId] = useState(student.circle_id);
+  const [guardianName, setGuardianName] = useState(student.guardian_name ?? "");
+  const [phone, setPhone] = useState(student.guardian_phone ?? "");
+  const [error, setError] = useState("");
   const circles = s.all("circles").filter((c) => c.active || c.id === student.circle_id);
 
   async function save() {
     if (!name.trim()) return;
-    await store.save("students", { ...student, name: name.trim(), circle_id: circleId }, "تعديل بيانات طالب");
+    const guardianPhone = phone.trim() ? normalizePhone(phone) : null;
+    if (phone.trim() && !guardianPhone) return setError("رقم ولي الأمر غير صحيح — اكتبه مثل 0912345678 أو ‎+963912345678");
+    await store.save(
+      "students",
+      { ...student, name: name.trim(), circle_id: circleId, guardian_name: guardianName.trim() || null, guardian_phone: guardianPhone },
+      "تعديل بيانات طالب"
+    );
     showToast("تم حفظ بيانات الطالب");
     onDone();
   }
@@ -297,6 +310,14 @@ function EditStudent({
           ))}
         </select>
       </div>
+      <div>
+        <label>اسم ولي الأمر</label>
+        <input value={guardianName} onChange={(e) => setGuardianName(e.target.value)} placeholder="اختياري" />
+      </div>
+      <div>
+        <label>رقم واتساب ولي الأمر</label>
+        <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" dir="ltr" inputMode="tel" placeholder="0912345678" />
+      </div>
       <div className="row-actions" style={{ alignSelf: "end" }}>
         <button onClick={save}>حفظ</button>
         {isAdmin && (
@@ -310,6 +331,7 @@ function EditStudent({
           </button>
         )}
       </div>
+      {error && <p className="error-text">{error}</p>}
     </div>
   );
 }
