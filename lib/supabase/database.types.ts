@@ -1113,6 +1113,45 @@ export type Database = {
           },
         ]
       }
+      report_sends: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          edited_at: string
+          kind: string
+          send_date: string
+          student_id: string
+          teacher_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          edited_at?: string
+          kind: string
+          send_date: string
+          student_id: string
+          teacher_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          edited_at?: string
+          kind?: string
+          send_date?: string
+          student_id?: string
+          teacher_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       students: {
         Row: {
           active: boolean

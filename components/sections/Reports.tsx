@@ -5,6 +5,7 @@ import { useApp } from "@/components/AppContext";
 import { usePersistentState } from "@/lib/usePersistentState";
 import ProgressRing from "@/components/ProgressRing";
 import { useScope } from "@/components/FilterBar";
+import SendReports from "@/components/SendReports";
 import { LOCAL_WINDOW_DAYS, useStore } from "@/lib/offline/store";
 import { entryRange, type Mushaf, type QuranRange } from "@/lib/quran";
 import {
@@ -74,6 +75,7 @@ export default function Reports() {
   const [offline, setOffline] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [sending, setSending] = useState(false);
 
   const [pFrom, pTo] =
     period === "day"
@@ -166,7 +168,10 @@ export default function Reports() {
   return (
     <section>
       <div className="card no-print">
-        <h3>📊 التقارير</h3>
+        <div className="title">
+          <h3>📊 التقارير</h3>
+          <button onClick={() => setSending((v) => !v)}>{sending ? "إغلاق الإرسال" : "📤 إرسال تقارير الحلقة"}</button>
+        </div>
         <div className="formgrid compact">
           <div>
             <label>النطاق</label>
@@ -239,6 +244,12 @@ export default function Reports() {
           ))}
         </div>
       </div>
+
+      {sending && (
+        <div className="no-print">
+          <SendReports onClose={() => setSending(false)} />
+        </div>
+      )}
 
       {offline && (
         <div className="notice no-print">

@@ -19,6 +19,7 @@ import type {
   CircleLesson,
   EduNote,
   GuardianLink,
+  ReportSend,
   QuranEntry,
   Student,
   Surah,
@@ -53,6 +54,7 @@ type TableRows = {
   circle_lessons: CircleLesson;
   activities: Activity;
   guardian_links: GuardianLink;
+  report_sends: ReportSend;
 };
 export type TableName = keyof TableRows;
 
@@ -65,7 +67,8 @@ export type OutboxTable =
   | "arabic_entries"
   | "edu_notes"
   | "circle_lessons"
-  | "activities";
+  | "activities"
+  | "report_sends";
 
 const TABLE_NAMES: TableName[] = [
   "circles",
@@ -82,6 +85,7 @@ const TABLE_NAMES: TableName[] = [
   "circle_lessons",
   "activities",
   "guardian_links",
+  "report_sends",
 ];
 
 // Pulled incrementally by updated_at, in dependency order (parents before children).
@@ -98,6 +102,7 @@ const SYNC_TABLES = [
   "circle_lessons",
   "activities",
   "guardian_links",
+  "report_sends",
 ] as const;
 
 // Server-managed columns are never sent: triggers set them (spec §9).
@@ -116,12 +121,19 @@ export function keyOf(table: TableName, row: Record<string, unknown>): string {
   if (table === "attendance") return `${row.student_id}|${row.att_date}`;
   if (table === "circle_lessons") return `${row.circle_id}|${row.lesson_date}`;
   if (table === "guardian_links") return String(row.student_id);
+  if (table === "report_sends") return `${row.student_id}|${row.send_date}|${row.kind}`;
   if (table === "quran_surahs") return String(row.surah_no);
   return String(row.id);
 }
 
 function onConflict(table: OutboxTable): string {
-  return table === "attendance" ? "student_id,att_date" : table === "circle_lessons" ? "circle_id,lesson_date" : "id";
+  return table === "attendance"
+    ? "student_id,att_date"
+    : table === "circle_lessons"
+      ? "circle_id,lesson_date"
+      : table === "report_sends"
+        ? "student_id,send_date,kind"
+        : "id";
 }
 
 function serverPayload(row: Record<string, unknown>): Record<string, unknown> {
@@ -562,6 +574,9 @@ class LocalStore {
       } else if (table === "circle_lessons") {
         const [circle_id, lesson_date] = key.split("|");
         q = this.sb.from("circle_lessons").select("*").eq("circle_id", circle_id).eq("lesson_date", lesson_date);
+      } else if (table === "report_sends") {
+        const [student_id, send_date, kind] = key.split("|");
+        q = this.sb.from("report_sends").select("*").eq("student_id", student_id).eq("send_date", send_date).eq("kind", kind);
       } else {
         // Every other synced table is keyed by id; the cast only picks one for typing.
         q = this.sb.from(table as "students").select("*").eq("id", key);
@@ -776,9 +791,15 @@ class LocalStore {
           q = q.is("deleted_at", null).gte("lesson_date", since);
         } else if (table === "activities") {
           q = q.is("deleted_at", null).gte("activity_date", since);
+        } else if (table === "report_sends") {
+          q = q.is("deleted_at", null).gte("send_date", since);
         }
         const tiebreak =
-          table === "attendance" || table === "guardian_links" ? "student_id" : table === "circle_lessons" ? "circle_id" : "id";
+          table === "attendance" || table === "guardian_links" || table === "report_sends"
+            ? "student_id"
+            : table === "circle_lessons"
+              ? "circle_id"
+              : "id";
         const { data, error } = await q.order("updated_at").order(tiebreak).range(from, from + PAGE - 1);
         if (error) throw new Error(error.message);
         const rows = (data ?? []) as TableRows[typeof table][];

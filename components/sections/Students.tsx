@@ -5,6 +5,7 @@ import { useApp } from "@/components/AppContext";
 import StudentCard from "@/components/StudentCard";
 import { useScope } from "@/components/FilterBar";
 import LessonCard from "@/components/LessonCard";
+import SendReports from "@/components/SendReports";
 import { matchesName } from "@/lib/arabic";
 import { normalizePhone } from "@/lib/guardian";
 import { usePersistentState } from "@/lib/usePersistentState";
@@ -44,6 +45,7 @@ export default function Students({
   const [recent, setRecent] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);
   const [rollCall, setRollCall] = useState(false);
+  const [sending, setSending] = useState(false);
   const [pending, setPending] = usePersistentState<"all" | "noAtt" | "noRec">("students.pending", "all");
   const listScroll = useRef(0);
 
@@ -110,6 +112,8 @@ export default function Students({
 
       <Insights students={active} open={open} />
 
+      {sending && <SendReports onClose={() => setSending(false)} />}
+
       {rollCall && (
         <RollCall
           circles={scopedCircles}
@@ -124,6 +128,9 @@ export default function Students({
           <div className="row-actions">
             <button className="secondary" onClick={() => setRollCall((r) => !r)}>
               {rollCall ? "إغلاق التحضير" : "📋 تحضير سريع"}
+            </button>
+            <button className="secondary" onClick={() => setSending((v) => !v)}>
+              {sending ? "إغلاق الإرسال" : "📤 إرسال التقارير"}
             </button>
             <button onClick={() => setAdding((a) => !a)}>{adding ? "إغلاق" : "+ إضافة طالب"}</button>
           </div>

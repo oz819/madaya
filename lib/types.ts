@@ -25,6 +25,8 @@ export type TalqeenSession = Tables<"talqeen_sessions">;
 export type CircleLesson = Tables<"circle_lessons">;
 export type Activity = Tables<"activities">;
 export type GuardianLink = Tables<"guardian_links">;
+export type ReportSend = Tables<"report_sends">;
+export type SendKind = "DAILY" | "MONTHLY" | "ABSENCE";
 
 export type QuranTrack = "HIFZ" | "TILAWA" | "MURAJAA" | "TALQEEN";
 
