@@ -39,6 +39,14 @@ jobs:
             # parts of it (the password) into this public log. Nothing of the URL is printed.
             if ! printf '%s' "$DB_URL" | grep -Eq '^postgres(ql)?://[^:/?#@]+:[^][/?#@]+@[^/?#@]+(:[0-9]+)?/[^/?#]+(\?[A-Za-z_]+=[^&#]*(&[A-Za-z_]+=[^&#]*)*)?$'; then
               echo "::error::SUPABASE_DB_URL is malformed. Replace [YOUR-PASSWORD] with the password, and percent-encode any ? # @ / : [ ] in it (or reset the database password to letters and digits)."
+              # Yes/no hints only, never the value.
+              has() { printf '%s' "$DB_URL" | grep -Eq "$1" && echo yes || echo no; }
+              echo "starts with postgresql:// or postgres:// : $(has '^postgres(ql)?://')"
+              echo "has spaces, quotes or line breaks         : $(printf '%s' "$DB_URL" | tr -d '\n' | grep -Eq "[[:space:]\"']" && echo yes || { [ "$(printf '%s' "$DB_URL" | wc -l)" -gt 0 ] && echo yes || echo no; })"
+              echo "still has [YOUR-PASSWORD]                 : $(has 'YOUR-PASSWORD')"
+              echo "number of @ signs (should be 1)           : $(printf '%s' "$DB_URL" | tr -cd '@' | wc -c)"
+              echo "password has ? # / [ ] (should be no)     : $(has '^[a-z]+://[^:]+:[^@]*[][?#/]')"
+              echo "ends with /postgres (or ?options)         : $(has '/postgres(\?.*)?$')"
               exit 1
             fi
             echo "ready=true" >> "$GITHUB_OUTPUT"
