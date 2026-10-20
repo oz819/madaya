@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useApp } from "@/components/AppContext";
 import { useScope } from "@/components/FilterBar";
 import AbsenceAlerts from "@/components/AbsenceAlerts";
+import BackupStatus from "@/components/BackupStatus";
 import { usePendingRegistrations } from "@/components/Registrations";
 import { useHistoryScope } from "@/components/ranking/useHistoryScope";
 import { useStore } from "@/lib/offline/store";
@@ -129,6 +130,8 @@ export default function Dashboard({ openStudent, openManage }: { openStudent: (i
       )}
 
       <AbsenceAlerts students={students} open={openStudent} />
+
+      <BackupStatus />
 
       <div className="card">
         <h3>🏫 الحلقات</h3>
