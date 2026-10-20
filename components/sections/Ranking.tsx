@@ -7,6 +7,7 @@ import Activities from "@/components/ranking/Activities";
 import SettingsForm from "@/components/ranking/SettingsForm";
 import StudentProgress from "@/components/ranking/StudentProgress";
 import { useRankData } from "@/components/ranking/useRankData";
+import { useHistoryScope } from "@/components/ranking/useHistoryScope";
 import { usePersistentState } from "@/lib/usePersistentState";
 import { useStore } from "@/lib/offline/store";
 import { rankingSettings, useRankingSettings } from "@/lib/rankingSettings";
@@ -58,7 +59,7 @@ function RankingTab() {
   const s = useStore();
   const { supabase, mushaf, profile, showToast } = useApp();
   const settings = useRankingSettings(supabase);
-  const { filter, inScope, label: filterName } = useScope();
+  const { filter, label: filterName } = useScope();
   const admin = profile.role === "ADMIN";
 
   const [kind, setKind] = usePersistentState<PeriodKind>("ranking.period", "week");
@@ -75,21 +76,22 @@ function RankingTab() {
   const period = periodRange(kind, today, settings, range);
   const circleId = filter.startsWith("c:") ? filter.slice(2) : null;
   const fetchFrom = period.prev ? period.prev.from : period.from;
-  const { data, partial, error } = useRankData(fetchFrom, period.to, circleId);
+  const history = useHistoryScope();
+  // Once students have moved, a halaqa's past includes students who aren't in it now.
+  const { data: fetched, partial, error } = useRankData(fetchFrom, period.to, history.moved ? null : circleId);
+  const data = history.data(fetched);
 
-  const pool = s
-    .all("students")
-    .filter((st) => st.active && inScope(st.circle_id))
-    .sort((a, b) => a.name.localeCompare(b.name, "ar"));
+  const active = s.all("students").filter((st) => st.active);
+  const pool = history.pool(active, fetchFrom, period.to).sort((a, b) => a.name.localeCompare(b.name, "ar"));
   const used = { ...settings, weights: trial ?? settings.weights };
-  const result = computeRanking(pool, data, used, mushaf, period.from, period.to);
-  const prev = period.prev ? computeRanking(pool, data, used, mushaf, period.prev.from, period.prev.to) : null;
+  const result = computeRanking(pool, data, used, mushaf, period.from, period.to, history.circleOn);
+  const prev = period.prev ? computeRanking(pool, data, used, mushaf, period.prev.from, period.prev.to, history.circleOn) : null;
   const prevRank = new Map(prev?.ranked.map((r) => [r.student.id, r.rank!]) ?? []);
   const scopeName = filter === "all" ? "كل الطلاب" : filterName;
 
   const student = studentId ? pool.find((st) => st.id === studentId) : null;
   if (student) {
-    return <StudentProgress student={student} pool={pool} circleId={circleId} settings={used} onBack={() => setStudentId(null)} />;
+    return <StudentProgress student={student} pool={active} circleId={circleId} settings={used} onBack={() => setStudentId(null)} />;
   }
 
   const w = draft ?? trial ?? settings.weights;

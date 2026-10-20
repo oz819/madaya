@@ -70,6 +70,10 @@ export default function StudentCard({ studentId, onClose }: { studentId: string;
   const p = studentProgress({ mushaf, quran, arabic, enrollments, books, edu, attendanceToday: att });
   const unsynced = s.unsyncedStudents().has(studentId);
   const circle = s.get("circles", student.circle_id);
+  const moves = s
+    .all("student_transfers")
+    .filter((t) => t.student_id === studentId && !t.deleted_at)
+    .sort((a, b) => b.transfer_date.localeCompare(a.transfer_date));
   const status = att && !att.deleted_at ? (att.status as AttendanceStatus) : null;
 
   function review(range: QuranRange) {
@@ -101,6 +105,20 @@ export default function StudentCard({ studentId, onClose }: { studentId: string;
               {student.name} {!student.active && <span className="badge redo">مؤرشف</span>}
             </h2>
             <span className="muted">{circle?.name ?? "—"}</span>
+            {moves.length > 0 && (
+              <details className="moves small">
+                <summary>سجل الحلقات ({moves.length})</summary>
+                <ul>
+                  {moves.map((t) => (
+                    <li key={t.id}>
+                      {t.transfer_date}: من «{s.get("circles", t.from_circle_id ?? "")?.name ?? "—"}» إلى «
+                      {s.get("circles", t.to_circle_id ?? "")?.name ?? "—"}»
+                    </li>
+                  ))}
+                </ul>
+                <span className="muted">سجلاته قبل كل نقل تبقى محسوبة على حلقته القديمة.</span>
+              </details>
+            )}
             {unsynced && <span className="badge warn" style={{ marginInlineStart: 8 }}>تغييرات لم تُرسل بعد</span>}
           </div>
           <button className="secondary" onClick={() => setEditing((e) => !e)}>
@@ -346,6 +364,9 @@ function EditStudent({
             </option>
           ))}
         </select>
+        {circleId !== student.circle_id && (
+          <p className="small muted">نقل من اليوم: سجلاته السابقة تبقى محسوبة على حلقته الحالية في الترتيب والتقارير.</p>
+        )}
       </div>
       <div>
         <label>اسم ولي الأمر</label>

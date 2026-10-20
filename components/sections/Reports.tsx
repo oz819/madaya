@@ -5,6 +5,8 @@ import { useApp } from "@/components/AppContext";
 import { usePersistentState } from "@/lib/usePersistentState";
 import ProgressRing from "@/components/ProgressRing";
 import { useScope } from "@/components/FilterBar";
+import { useHistoryScope } from "@/components/ranking/useHistoryScope";
+import type { CircleOn } from "@/lib/transfers";
 import SendReports from "@/components/SendReports";
 import { LOCAL_WINDOW_DAYS, useStore } from "@/lib/offline/store";
 import { entryRange, type Mushaf, type QuranRange } from "@/lib/quran";
@@ -84,7 +86,18 @@ export default function Reports() {
         ? [from, to]
         : [`${month}-01`, addDays(`${addMonth(month)}-01`, -1)];
 
-  const students = allStudents.filter((st) => scope === "filter" || st.id === studentId);
+  // A moved student's past days stay in their old halaqa's reports (نقل الطلاب).
+  const history = useHistoryScope();
+  const students =
+    scope === "filter"
+      ? history
+          .pool(
+            s.all("students").filter((st) => st.active),
+            pFrom,
+            pTo
+          )
+          .sort((a, b) => a.name.localeCompare(b.name, "ar"))
+      : allStudents.filter((st) => st.id === studentId);
   const studentIds = new Set(students.map((st) => st.id));
 
   useEffect(() => {
@@ -110,7 +123,7 @@ export default function Reports() {
       const { data: res, error: err } = await supabase.rpc("report_data", {
         p_from: pFrom,
         p_to: pTo,
-        ...(scope === "filter" && circleId ? { p_circle_id: circleId } : {}),
+        ...(scope === "filter" && circleId && !history.moved ? { p_circle_id: circleId } : {}),
         ...(scope === "student" ? { p_student_id: studentId } : {}),
       });
       if (cancelled) return;
@@ -130,24 +143,29 @@ export default function Reports() {
     };
     // Re-query when the filters change; local data changes don't need a server round trip.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supabase, pFrom, pTo, scope, circleId, studentId]);
+  }, [supabase, pFrom, pTo, scope, circleId, studentId, history.moved]);
 
   const books = s.lookup("arabic_books");
+  // The filter's students, on the days they were in its halaqat.
+  const keep = <R extends { student_id: string }>(rows: R[], day: (r: R) => string) =>
+    rows.filter((r) => studentIds.has(r.student_id) && (scope !== "filter" || inScope(history.circleOn(r.student_id, day(r)) ?? "")));
   const filtered: ReportData | null = data && {
-    quran: data.quran.filter((e) => studentIds.has(e.student_id)),
-    arabic: data.arabic.filter((e) => studentIds.has(e.student_id)),
-    tarbiya: data.tarbiya.filter((n) => studentIds.has(n.student_id)),
-    attendance: data.attendance.filter((a) => studentIds.has(a.student_id)),
+    quran: keep(data.quran, (e) => e.entry_date),
+    arabic: keep(data.arabic, (e) => e.entry_date),
+    tarbiya: keep(data.tarbiya, (n) => n.record_date),
+    attendance: keep(data.attendance, (a) => a.att_date),
     lessons: data.lessons,
   };
   const chosen = TRACKS.filter((t) => tracks.has(t.id));
-  const rows = filtered ? buildRows(students, filtered, chosen.map((t) => t.id), period, mushaf, books) : [];
+  const rows = filtered ? buildRows(students, filtered, chosen.map((t) => t.id), period, mushaf, books, history.circleOn) : [];
   const scopeLabel =
     scope === "student" ? (s.get("students", studentId)?.name ?? "—") : filter === "all" ? "جميع الحلقات" : filterName;
   const periodLabel = period === "day" ? pFrom : period === "month" ? month : `${pFrom} ← ${pTo}`;
   const whatsapp = buildWhatsApp(rows, chosen, scopeLabel, periodLabel);
   const timeline =
-    scope === "student" && filtered ? buildTimeline(filtered, chosen.map((t) => t.id), mushaf, books, s.get("students", studentId)) : null;
+    scope === "student" && filtered
+      ? buildTimeline(filtered, chosen.map((t) => t.id), mushaf, books, history.circleOn, s.get("students", studentId))
+      : null;
 
   function copy() {
     navigator.clipboard?.writeText(whatsapp);
@@ -357,20 +375,20 @@ function buildRows(
   tracks: TrackKey[],
   period: Period,
   mushaf: Mushaf,
-  books: Map<string, ArabicBook>
+  books: Map<string, ArabicBook>,
+  circleOn: CircleOn
 ): Row[] {
   const quran = groupBy(d.quran, (e) => e.student_id);
   const arabic = groupBy(d.arabic, (e) => e.student_id);
   const tarbiya = groupBy(d.tarbiya, (n) => n.student_id);
   const att = groupBy(d.attendance, (a) => a.student_id);
-  const lessons = groupBy(d.lessons, (l) => l.circle_id);
   const empty = (text = period === "day" ? "لم يُسجَّل" : "—"): Cell => ({ text, empty: true });
 
   return students.map((student) => {
     const cells: Row["cells"] = {};
     for (const t of tracks) {
       if (t === "LESSON") {
-        const taken = attendedLessons(student, att.get(student.id), lessons.get(student.circle_id));
+        const taken = attendedLessons(student, att.get(student.id), d.lessons, circleOn);
         cells[t] = taken.length ? { text: taken.map((l) => l.title).join("، "), empty: false } : empty("—");
       } else if (t === "ATTENDANCE") {
         const list = att.get(student.id) ?? [];
@@ -428,12 +446,15 @@ function buildRows(
 }
 
 // The lessons of the student's halaqa on the days they were present or late.
-function attendedLessons(student: Student, att: Attendance[] | undefined, lessons: CircleLesson[] | undefined): CircleLesson[] {
+// The lessons of the halaqa the student was in on each day they attended.
+function attendedLessons(student: Student, att: Attendance[] | undefined, lessons: CircleLesson[], circleOn: CircleOn): CircleLesson[] {
   const days = new Set((att ?? []).filter((a) => a.status === "PRESENT" || a.status === "LATE").map((a) => a.att_date));
-  return (lessons ?? []).filter((l) => days.has(l.lesson_date)).sort((a, b) => a.lesson_date.localeCompare(b.lesson_date));
+  return lessons
+    .filter((l) => days.has(l.lesson_date) && l.circle_id === (circleOn(student.id, l.lesson_date) ?? student.circle_id))
+    .sort((a, b) => a.lesson_date.localeCompare(b.lesson_date));
 }
 
-function buildTimeline(d: ReportData, tracks: TrackKey[], mushaf: Mushaf, books: Map<string, ArabicBook>, student?: Student) {
+function buildTimeline(d: ReportData, tracks: TrackKey[], mushaf: Mushaf, books: Map<string, ArabicBook>, circleOn: CircleOn, student?: Student) {
   const items: { date: string; order: string; track: string; text: string }[] = [];
   for (const e of d.quran) {
     if (!tracks.includes(e.track as TrackKey)) continue;
@@ -461,8 +482,7 @@ function buildTimeline(d: ReportData, tracks: TrackKey[], mushaf: Mushaf, books:
     for (const a of d.attendance) items.push({ date: a.att_date, order: "", track: "الحضور", text: ATTENDANCE_LABEL[a.status as AttendanceStatus] });
   }
   if (tracks.includes("LESSON") && student) {
-    const mine = d.lessons.filter((l) => l.circle_id === student.circle_id);
-    for (const l of attendedLessons(student, d.attendance, mine)) items.push({ date: l.lesson_date, order: "~", track: "الدرس", text: l.title });
+    for (const l of attendedLessons(student, d.attendance, d.lessons, circleOn)) items.push({ date: l.lesson_date, order: "~", track: "الدرس", text: l.title });
   }
   return items.sort((a, b) => a.date.localeCompare(b.date) || a.order.localeCompare(b.order));
 }

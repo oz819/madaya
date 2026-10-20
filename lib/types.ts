@@ -27,6 +27,7 @@ export type Activity = Tables<"activities">;
 export type GuardianLink = Tables<"guardian_links">;
 export type ReportSend = Tables<"report_sends">;
 export type Exam = Tables<"exams">;
+export type StudentTransfer = Tables<"student_transfers">;
 export type ExamKind = "JUZ" | "SURAH" | "MONTHLY";
 export type SendKind = "DAILY" | "MONTHLY" | "ABSENCE";
 

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useApp } from "@/components/AppContext";
 import { useScope } from "@/components/FilterBar";
 import { useRankData } from "@/components/ranking/useRankData";
+import { useHistoryScope } from "@/components/ranking/useHistoryScope";
 import { LOCAL_WINDOW_DAYS, store, useStore } from "@/lib/offline/store";
 import { computeRanking } from "@/lib/ranking";
 import { useRankingSettings } from "@/lib/rankingSettings";
@@ -37,6 +38,8 @@ export default function SendReports({ onClose }: { onClose: () => void }) {
   const monthFrom = `${month}-01`;
   const monthTo = localDateStr(new Date(y, m, 0));
   const rankData = useRankData(monthFrom, monthTo, null);
+  // Attendance days counted in the halaqa the student was in on each day (نقل الطلاب).
+  const { circleOn } = useHistoryScope();
 
   // Rank within each halaqa for the month summary.
   const ranks = useMemo(() => {
@@ -49,11 +52,11 @@ export default function SendReports({ onClose }: { onClose: () => void }) {
       byCircle.set(st.circle_id, list);
     }
     for (const list of byCircle.values()) {
-      const r = computeRanking(list, rankData.data, settings, mushaf, monthFrom, monthTo);
+      const r = computeRanking(list, rankData.data, settings, mushaf, monthFrom, monthTo, circleOn);
       for (const x of r.ranked) out.set(x.student.id, { rank: x.rank, of: r.ranked.length });
     }
     return out;
-  }, [mode, s, rankData.data, settings, mushaf, monthFrom, monthTo]);
+  }, [mode, s, rankData.data, settings, mushaf, monthFrom, monthTo, circleOn]);
 
   const kind: SendKind = mode;
   const sendDate = mode === "DAILY" ? date : monthFrom;

@@ -4,6 +4,7 @@ import PublicShell from "@/components/PublicShell";
 import { Mushaf } from "@/lib/quran";
 import { computeRanking, settingsFromRow, weekStartOf, type RankData } from "@/lib/ranking";
 import { juzTitle } from "@/lib/exams";
+import { membership, rowsInScope, studentsInScope } from "@/lib/transfers";
 import { addDays, type Student } from "@/lib/types";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -107,14 +108,17 @@ async function load() {
     return sb.from(table).select("*");
   }
 
-  const [students, circles, surahs] = await Promise.all([
+  const [students, circles, surahs, transfers] = await Promise.all([
     all("students", (q) => q.eq("active", true).is("deleted_at", null)),
     all("circles", (q) => q.eq("active", true).is("deleted_at", null)),
     all("quran_surahs", (q) => q),
+    all("student_transfers", (q) => q.is("deleted_at", null)),
   ]);
   const mushaf = new Mushaf(surahs);
   const circleOf = new Map(circles.map((c) => [c.id, c]));
   const live = students.filter((s) => circleOf.has(s.circle_id));
+  // A student moved between sections counts in each for the days they were there.
+  const circleOn = membership(students, transfers);
 
   async function rank(from: string, to: string) {
     const period = <T extends keyof Tables>(table: T, col: string) => all(table, (q) => q.is("deleted_at", null).gte(col, from).lte(col, to));
@@ -125,10 +129,17 @@ async function load() {
       period("activities", "activity_date"),
       period("exams", "exam_date"),
     ]);
-    const data = { quran, attendance, tarbiya, activities, exams } as unknown as RankData;
     return SECTIONS.map((section) => {
-      const inSection = live.filter((s) => circleOf.get(s.circle_id)?.section === section) as Student[];
-      const r = computeRanking(inSection, data, settings, mushaf, from, to);
+      const inSection = (id: string) => circleOf.get(id)?.section === section;
+      const pool = studentsInScope(live, transfers, inSection, from, to) as Student[];
+      const data = {
+        quran: rowsInScope(quran, (e) => e.entry_date, circleOn, inSection),
+        attendance: rowsInScope(attendance, (a) => a.att_date, circleOn, inSection),
+        tarbiya: rowsInScope(tarbiya, (n) => n.record_date, circleOn, inSection),
+        activities,
+        exams: rowsInScope(exams, (x) => x.exam_date, circleOn, inSection),
+      } as unknown as RankData;
+      const r = computeRanking(pool, data, settings, mushaf, from, to, circleOn);
       return {
         section,
         top: r.ranked

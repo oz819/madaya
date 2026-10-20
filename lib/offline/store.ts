@@ -21,6 +21,7 @@ import type {
   Exam,
   GuardianLink,
   ReportSend,
+  StudentTransfer,
   QuranEntry,
   Student,
   Surah,
@@ -57,6 +58,7 @@ type TableRows = {
   guardian_links: GuardianLink;
   report_sends: ReportSend;
   exams: Exam;
+  student_transfers: StudentTransfer;
 };
 export type TableName = keyof TableRows;
 
@@ -90,12 +92,14 @@ const TABLE_NAMES: TableName[] = [
   "guardian_links",
   "report_sends",
   "exams",
+  "student_transfers",
 ];
 
 // Pulled incrementally by updated_at, in dependency order (parents before children).
 const SYNC_TABLES = [
   "circles",
   "students",
+  "student_transfers",
   "arabic_books",
   "student_arabic_enrollments",
   "talqeen_sessions",

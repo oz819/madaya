@@ -5,6 +5,7 @@ import { useApp } from "@/components/AppContext";
 import { useScope } from "@/components/FilterBar";
 import AbsenceAlerts from "@/components/AbsenceAlerts";
 import { usePendingRegistrations } from "@/components/Registrations";
+import { useHistoryScope } from "@/components/ranking/useHistoryScope";
 import { useStore } from "@/lib/offline/store";
 import { useRankingSettings } from "@/lib/rankingSettings";
 import { periodRange } from "@/lib/ranking";
@@ -28,26 +29,30 @@ export default function Dashboard({ openStudent, openManage }: { openStudent: (i
   const quranBy = s.byStudent("quran_entries");
   const attBy = s.byStudent("attendance");
   const lessons = s.all("circle_lessons");
+  // Records count towards the halaqa the student was in on their day (نقل الطلاب).
+  const { circleOn } = useHistoryScope();
+  const everyone = s.all("students").filter((st) => st.active);
 
   const perCircle = useMemo(() => {
     return scopedCircles
       .map((c) => {
         const mine = students.filter((st) => st.circle_id === c.id);
         let ayahs = 0;
-        for (const st of mine) {
+        const att: Attendance[] = [];
+        for (const st of everyone) {
           const ranges = (quranBy.get(st.id) ?? [])
-            .filter((e) => e.track === "HIFZ" && !e.deleted_at && e.entry_date >= month.from && e.entry_date <= today)
+            .filter((e) => e.track === "HIFZ" && !e.deleted_at && e.entry_date >= month.from && e.entry_date <= today && circleOn(st.id, e.entry_date) === c.id)
             .map(entryRange)
             .filter((r): r is QuranRange => !!r);
           if (ranges.length) ayahs += mushaf.coverage(ranges);
+          for (const a of attBy.get(st.id) ?? []) if (circleOn(st.id, a.att_date) === c.id) att.push(a);
         }
-        const att = mine.flatMap((st) => attBy.get(st.id) ?? []);
         return { circle: c, count: mine.length, ayahs, week: rate(att, week.from, today), month: rate(att, month.from, today) };
       })
-      .filter((x) => x.count > 0);
-  }, [scopedCircles, students, quranBy, attBy, mushaf, month.from, week.from, today]);
+      .filter((x) => x.count > 0 || x.ayahs > 0);
+  }, [scopedCircles, students, everyone, circleOn, quranBy, attBy, mushaf, month.from, week.from, today]);
 
-  const all = students.flatMap((st) => attBy.get(st.id) ?? []);
+  const all = everyone.flatMap((st) => (attBy.get(st.id) ?? []).filter((a) => inScope(circleOn(st.id, a.att_date) ?? "")));
   const weekRate = rate(all, week.from, today);
   const monthRate = rate(all, month.from, today);
   const bySection = (["MALE", "FEMALE"] as Section[])

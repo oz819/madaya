@@ -507,3 +507,7 @@ button.juz-cell{padding:0;cursor:pointer}
 .honor-list .medal{font-size:1.4rem;min-width:1.8em;text-align:center}
 .honor-list b{flex:1}
 .honor-cert li{background:#fffaf0;border-color:#efe0b8}
+
+/* ---- Phase 16: student transfers ---- */
+.moves{margin-top:4px}
+.moves ul{margin:4px 0;padding-inline-start:18px;line-height:1.8}

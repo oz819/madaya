@@ -3,6 +3,7 @@
 import { useApp } from "@/components/AppContext";
 import MiniChart from "@/components/ranking/MiniChart";
 import { useRankData } from "@/components/ranking/useRankData";
+import { useHistoryScope } from "@/components/ranking/useHistoryScope";
 import { entryRange, type QuranRange } from "@/lib/quran";
 import { computeRanking, weeksSince, type RankingSettings } from "@/lib/ranking";
 import { addDays, todayStr, type Student } from "@/lib/types";
@@ -25,7 +26,9 @@ export default function StudentProgress({
   const { mushaf } = useApp();
   const today = todayStr();
   const start = settings.courseStart ?? addDays(today, -55);
-  const { data, partial } = useRankData(start, today, circleId);
+  const history = useHistoryScope();
+  const { data: fetched, partial } = useRankData(start, today, history.moved ? null : circleId);
+  const data = history.data(fetched);
   const weeks = weeksSince(start, today, settings.weekStart);
 
   const hifzRanges = data.quran
@@ -36,7 +39,7 @@ export default function StudentProgress({
 
   const rows = weeks.map((ws) => {
     const we = addDays(ws, 6);
-    const ranking = computeRanking(pool, data, settings, mushaf, ws, we);
+    const ranking = computeRanking(history.pool(pool, ws, we), data, settings, mushaf, ws, we, history.circleOn);
     const mine = [...ranking.ranked, ...ranking.unranked].find((r) => r.student.id === student.id);
     const grades = data.quran
       .filter((e) => e.student_id === student.id && e.entry_date >= ws && e.entry_date <= we && e.track !== "TALQEEN")

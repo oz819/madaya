@@ -16,6 +16,7 @@
 import { entryRange, type Mushaf, type QuranRange } from "@/lib/quran";
 import { addDays, localDateStr, type Activity, type Attendance, type Exam, type QuranEntry, type Student } from "@/lib/types";
 import type { Database } from "@/lib/supabase/database.types";
+import type { CircleOn } from "@/lib/transfers";
 
 export type ItemKey = "hifz" | "tilawa" | "attendance" | "tarbiya" | "activities" | "exams";
 
@@ -127,7 +128,9 @@ export function computeRanking(
   settings: RankingSettings,
   mushaf: Mushaf,
   from: string,
-  to: string
+  to: string,
+  /** The student's halaqa on a day (نقل الطلاب); their current one when not given. */
+  circleOn?: CircleOn
 ): Ranking {
   const inPeriod = (d: string) => d >= from && d <= to;
   const ids = new Set(students.map((s) => s.id));
@@ -140,9 +143,10 @@ export function computeRanking(
   const exams = (data.exams ?? []).filter((x) => ids.has(x.student_id) && inPeriod(x.exam_date) && !x.deleted_at);
 
   const circleOf = new Map(students.map((s) => [s.id, s.circle_id]));
+  const halaqaOn = (id: string, date: string) => (circleOn?.(id, date) ?? circleOf.get(id))!;
   const circleDays = new Map<string, Set<string>>();
   for (const a of attendance) {
-    const c = circleOf.get(a.student_id)!;
+    const c = halaqaOn(a.student_id, a.att_date);
     if (!circleDays.has(c)) circleDays.set(c, new Set());
     circleDays.get(c)!.add(a.att_date);
   }
@@ -201,7 +205,9 @@ export function computeRanking(
     const mine = new Map((attBy.get(s.id) ?? []).map((a) => [a.att_date, a.status]));
     let days = 0;
     let attended = 0;
-    for (const d of circleDays.get(s.circle_id) ?? []) {
+    // The days their halaqa met, counting each day in the halaqa they were in then.
+    const met = circleOn ? [...circleDays].flatMap(([c, ds]) => [...ds].filter((d) => halaqaOn(s.id, d) === c)) : (circleDays.get(s.circle_id) ?? []);
+    for (const d of met) {
       if (d < joined && !mine.has(d)) continue; // before the student joined
       const st = mine.get(d);
       if (st === "EXCUSED") continue;
@@ -212,7 +218,9 @@ export function computeRanking(
 
     const tarbiyaScore = avg((tarbiyaBy.get(s.id) ?? []).map((n) => grade(n.quality)).filter((g): g is number => g != null));
 
-    const theirs = activities.filter((a) => (!a.circle_id || a.circle_id === s.circle_id) && (a.activity_date >= joined || a.student_ids.includes(s.id)));
+    const theirs = activities.filter(
+      (a) => (!a.circle_id || a.circle_id === halaqaOn(s.id, a.activity_date)) && (a.activity_date >= joined || a.student_ids.includes(s.id))
+    );
     const went = theirs.filter((a) => a.student_ids.includes(s.id)).length;
     const activitiesScore = theirs.length ? (went / theirs.length) * 100 : null;
 

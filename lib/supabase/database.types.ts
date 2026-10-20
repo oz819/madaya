@@ -1302,6 +1302,42 @@ export type Database = {
         }
         Relationships: []
       }
+      student_transfers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          from_circle_id: string | null
+          id: string
+          student_id: string
+          to_circle_id: string | null
+          transfer_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          from_circle_id?: string | null
+          id?: string
+          student_id: string
+          to_circle_id?: string | null
+          transfer_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          from_circle_id?: string | null
+          id?: string
+          student_id?: string
+          to_circle_id?: string | null
+          transfer_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       students: {
         Row: {
           active: boolean
