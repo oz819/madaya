@@ -36,17 +36,14 @@ jobs:
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
             # The URL is checked here so a malformed one never reaches pg_dump, whose errors quote
-            # parts of it (the password) into this public log. Nothing of the URL is printed.
-            if ! printf '%s' "$DB_URL" | grep -Eq '^postgres(ql)?://[^:/?#@]+:[^][/?#@]+@[^/?#@]+(:[0-9]+)?/[^/?#]+(\?[A-Za-z_]+=[^&#]*(&[A-Za-z_]+=[^&#]*)*)?$'; then
-              echo "::error::SUPABASE_DB_URL is malformed. Replace [YOUR-PASSWORD] with the password, and percent-encode any ? # @ / : [ ] in it (or reset the database password to letters and digits)."
-              # Yes/no hints only, never the value.
-              has() { printf '%s' "$DB_URL" | grep -Eq "$1" && echo yes || echo no; }
-              echo "starts with postgresql:// or postgres:// : $(has '^postgres(ql)?://')"
-              echo "has spaces, quotes or line breaks         : $(printf '%s' "$DB_URL" | tr -d '\n' | grep -Eq "[[:space:]\"']" && echo yes || { [ "$(printf '%s' "$DB_URL" | wc -l)" -gt 0 ] && echo yes || echo no; })"
-              echo "still has [YOUR-PASSWORD]                 : $(has 'YOUR-PASSWORD')"
-              echo "number of @ signs (should be 1)           : $(printf '%s' "$DB_URL" | tr -cd '@' | wc -c)"
-              echo "password has ? # / [ ] (should be no)     : $(has '^[a-z]+://[^:]+:[^@]*[][?#/]')"
-              echo "ends with /postgres (or ?options)         : $(has '/postgres(\?.*)?$')"
+            # parts of it into this public log. Nothing of the URL is printed. The password may
+            # hold any character as typed: the dump step splits it off at the last @.
+            target="${DB_URL##*@}"
+            if ! printf '%s' "$DB_URL" | grep -Eq '^postgres(ql)?://[^:@/]+:.+@' \
+              || ! printf '%s' "$target" | grep -Eq '^[A-Za-z0-9.-]+(:[0-9]+)?/[A-Za-z0-9_-]+(\?[A-Za-z_]+=[^&#[:space:]]*(&[A-Za-z_]+=[^&#[:space:]]*)*)?$' \
+              || printf '%s' "$DB_URL" | grep -q 'YOUR-PASSWORD' \
+              || [ "$(printf '%s' "$DB_URL" | wc -l)" -gt 0 ]; then
+              echo "::error::SUPABASE_DB_URL is malformed. Paste Supabase → Connect → Session pooler, with [YOUR-PASSWORD] replaced by the password, and nothing else (no spaces, quotes or line breaks)."
               exit 1
             fi
             echo "ready=true" >> "$GITHUB_OUTPUT"
@@ -61,9 +58,16 @@ jobs:
           set -euo pipefail
           name="madaya-$(TZ=Asia/Damascus date +%F)"
           echo "NAME=$name" >> "$GITHUB_ENV"
+          # The password goes to pg_dump on its own (PGPASSWORD), so special characters in it
+          # need no URL encoding: user:password is everything before the last @.
+          rest="${DB_URL#*://}"
+          creds="${rest%@*}"
+          export PGPASSWORD="${creds#*:}"
+          echo "::add-mask::$PGPASSWORD"
+          export TARGET="postgresql://${creds%%:*}@${rest##*@}"
           # pg_dump must match the server's major version (Postgres 17).
-          docker run --rm -e DB_URL postgres:17 \
-            sh -c 'pg_dump "$DB_URL" --format=custom --no-owner --no-privileges --schema=public --schema=private' > "$name.dump"
+          docker run --rm -e PGPASSWORD -e TARGET postgres:17 \
+            sh -c 'pg_dump "$TARGET" --format=custom --no-owner --no-privileges --schema=public --schema=private' > "$name.dump"
           test -s "$name.dump"
           ls -lh "$name.dump"
           gpg --batch --yes --pinentry-mode loopback --passphrase "$PASS" --symmetric --cipher-algo AES256 -o "$name.dump.gpg" "$name.dump"
