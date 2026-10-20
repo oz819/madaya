@@ -116,6 +116,7 @@ export type Database = {
           absence_threshold: number
           course_start: string | null
           grades: Json
+          honor_enabled: boolean
           id: number
           pass_mark: number
           updated_at: string
@@ -128,6 +129,7 @@ export type Database = {
           absence_threshold?: number
           course_start?: string | null
           grades?: Json
+          honor_enabled?: boolean
           id?: number
           pass_mark?: number
           updated_at?: string
@@ -140,6 +142,7 @@ export type Database = {
           absence_threshold?: number
           course_start?: string | null
           grades?: Json
+          honor_enabled?: boolean
           id?: number
           pass_mark?: number
           updated_at?: string

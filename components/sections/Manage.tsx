@@ -6,7 +6,7 @@ import { confirmDialog } from "@/components/ConfirmDialog";
 import { adminSoftDelete } from "@/lib/adminDelete";
 import { PROFILE_COLUMNS, store, useStore } from "@/lib/offline/store";
 import { SECTIONS, SECTION_LABEL, effectiveFilter, filterLabel, filterOptions } from "@/lib/filter";
-import CenterSettings from "@/components/CenterSettings";
+import CenterSettings, { HonorSettings } from "@/components/CenterSettings";
 import Registrations from "@/components/Registrations";
 import ExportExcel from "@/components/ExportExcel";
 
@@ -24,6 +24,7 @@ export default function Manage() {
       <Halaqat />
       <ArabicBooks />
       <CenterSettings />
+      <HonorSettings />
       <ExportExcel />
     </section>
   );

@@ -15,6 +15,7 @@
 
 import { entryRange, type Mushaf, type QuranRange } from "@/lib/quran";
 import { addDays, localDateStr, type Activity, type Attendance, type Exam, type QuranEntry, type Student } from "@/lib/types";
+import type { Database } from "@/lib/supabase/database.types";
 
 export type ItemKey = "hifz" | "tilawa" | "attendance" | "tarbiya" | "activities" | "exams";
 
@@ -42,6 +43,8 @@ export type RankingSettings = {
   absenceMessage: string | null;
   /** Score out of 100 needed to pass an exam. */
   passMark: number;
+  /** لوحة الشرف: the public /honor page is on. */
+  honorEnabled: boolean;
 };
 
 export const DEFAULT_SETTINGS: RankingSettings = {
@@ -52,7 +55,27 @@ export const DEFAULT_SETTINGS: RankingSettings = {
   absenceThreshold: 3,
   absenceMessage: null,
   passMark: 70,
+  honorEnabled: false,
 };
+
+type SettingsRow = Database["public"]["Tables"]["ranking_settings"]["Row"];
+
+export function settingsFromRow(r: SettingsRow): RankingSettings {
+  const w = (r.weights ?? {}) as Record<string, unknown>;
+  const weights = Object.fromEntries(ITEMS.map((i) => [i.key, Number(w[i.key]) || 0])) as Weights;
+  const g = (r.grades ?? {}) as Record<string, unknown>;
+  const grades = Object.fromEntries(Object.entries(g).map(([k, v]) => [k, Number(v)]));
+  return {
+    weights,
+    grades,
+    weekStart: r.week_start,
+    courseStart: r.course_start,
+    absenceThreshold: r.absence_threshold ?? DEFAULT_SETTINGS.absenceThreshold,
+    absenceMessage: r.absence_message ?? null,
+    passMark: r.pass_mark ?? DEFAULT_SETTINGS.passMark,
+    honorEnabled: r.honor_enabled ?? false,
+  };
+}
 
 export const WEEK_DAYS = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 

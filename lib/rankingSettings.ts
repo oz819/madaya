@@ -7,27 +7,9 @@
 import { useEffect, useSyncExternalStore } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
-import { DEFAULT_SETTINGS, ITEMS, type RankingSettings, type Weights } from "@/lib/ranking";
+import { DEFAULT_SETTINGS, settingsFromRow, type RankingSettings } from "@/lib/ranking";
 
 const LOCAL_KEY = "ranking:settings";
-
-type Row = Database["public"]["Tables"]["ranking_settings"]["Row"];
-
-function fromRow(r: Row): RankingSettings {
-  const w = (r.weights ?? {}) as Record<string, unknown>;
-  const weights = Object.fromEntries(ITEMS.map((i) => [i.key, Number(w[i.key]) || 0])) as Weights;
-  const g = (r.grades ?? {}) as Record<string, unknown>;
-  const grades = Object.fromEntries(Object.entries(g).map(([k, v]) => [k, Number(v)]));
-  return {
-    weights,
-    grades,
-    weekStart: r.week_start,
-    courseStart: r.course_start,
-    absenceThreshold: r.absence_threshold ?? DEFAULT_SETTINGS.absenceThreshold,
-    absenceMessage: r.absence_message ?? null,
-    passMark: r.pass_mark ?? DEFAULT_SETTINGS.passMark,
-  };
-}
 
 function readLocal(): RankingSettings | null {
   try {
@@ -76,7 +58,7 @@ class SettingsStore {
       this.loaded = false;
       return;
     }
-    if (data) this.apply(fromRow(data));
+    if (data) this.apply(settingsFromRow(data));
   }
 
   /** Admin only. Resolves with an error message, or "" when saved. */
@@ -92,13 +74,14 @@ class SettingsStore {
         absence_threshold: next.absenceThreshold,
         absence_message: next.absenceMessage,
         pass_mark: next.passMark,
+        honor_enabled: next.honorEnabled,
       })
       .eq("id", 1)
       .select("*")
       .maybeSingle();
     if (error) return error.message;
     if (!data) return "لم تُحفظ الإعدادات: هذا الإجراء للمدير فقط.";
-    this.apply(fromRow(data));
+    this.apply(settingsFromRow(data));
     return "";
   }
 }

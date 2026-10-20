@@ -76,3 +76,49 @@ export default function CenterSettings() {
     </form>
   );
 }
+
+// لوحة الشرف العامة: off by default. When on, /honor shows the week's top students (first name and
+// the family name's initial) and new juz' certificates, for the parents' group or the centre's page.
+export function HonorSettings() {
+  const { supabase, showToast } = useApp();
+  const settings = useRankingSettings(supabase);
+  const [error, setError] = useState("");
+  // Shown at once while saving; back to the saved value if it fails.
+  const [pending, setPending] = useState<boolean | null>(null);
+  const on = pending ?? settings.honorEnabled;
+  const link = typeof location === "undefined" ? "" : `${location.origin}/honor`;
+
+  async function toggle(on: boolean) {
+    setPending(on);
+    const err = await rankingSettings.save(supabase, { ...settings, honorEnabled: on });
+    setPending(null);
+    setError(err);
+    if (!err) showToast(on ? "لوحة الشرف ظاهرة للجميع الآن" : "تم إخفاء لوحة الشرف");
+  }
+
+  return (
+    <div className="card honor-settings">
+      <h3>🏅 لوحة الشرف العامة</h3>
+      <p className="small muted">
+        صفحة عامة بلا تسجيل دخول فيها متفوقو الأسبوع في كل قسم والشهادات الجديدة. تظهر الأسماء مختصرة (الاسم الأول وأول حرف من الكنية)
+        حفاظًا على الخصوصية.
+      </p>
+      <label className="switch-row">
+        <input type="checkbox" checked={on} disabled={pending !== null} onChange={(e) => toggle(e.target.checked)} />
+        {on ? "ظاهرة للجميع" : "مخفية"}
+      </label>
+      {on && (
+        <p className="small">
+          الرابط: <span dir="ltr">{link}</span>{" "}
+          <button type="button" className="link" onClick={() => navigator.clipboard?.writeText(link).then(() => showToast("تم نسخ الرابط"), () => {})}>
+            نسخ
+          </button>{" "}
+          <a href="/honor" target="_blank" rel="noreferrer">
+            فتح
+          </a>
+        </p>
+      )}
+      {error && <p className="error-text">{error}</p>}
+    </div>
+  );
+}
