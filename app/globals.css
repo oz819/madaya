@@ -467,3 +467,24 @@ button.juz-cell{padding:0;cursor:pointer}
 }
 .ready-card{border-inline-start:4px solid var(--g)}
 .ready-card .insight-list li{gap:8px;cursor:default}
+
+/* ---- Phase 9: registration form + admin dashboard ---- */
+.register-form{display:flex;flex-direction:column;gap:12px}
+.register-form h2{margin:0;font-family:var(--font-reem-kufi),Tahoma,sans-serif;font-size:1.15rem}
+.register-form p{margin:0}
+.register-form label{display:flex;flex-direction:column;gap:5px;font-weight:600;font-size:.95em}
+.register-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hp-field{position:absolute!important;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);opacity:0;pointer-events:none}
+.register-done h2{font-family:var(--font-reem-kufi),Tahoma,sans-serif;font-size:1.15rem}
+.reg-list{list-style:none;padding:0;margin:10px 0 0;display:flex;flex-direction:column;gap:10px}
+.reg-list li{border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.reg-list.done li{flex-direction:row;justify-content:space-between;align-items:center;gap:8px;opacity:.85}
+.reg-actions{display:flex;gap:6px;flex-wrap:wrap}
+.reg-actions select{flex:1;min-width:140px;width:auto}
+.dash-tiles{margin-top:4px}
+.dash-tiles .card{margin:0}
+.tile-button{text-align:inherit;font:inherit;color:inherit;cursor:pointer;width:100%}
+.quiet-card .insight-list li{flex-wrap:wrap;gap:4px 10px;cursor:default}
+.table-scroll{overflow-x:auto}
+.dash-table td,.dash-table th{white-space:nowrap}
+@media (max-width:520px){.dash-tiles{grid-template-columns:1fr 1fr;gap:8px}.dash-tiles .stat-tile{flex-direction:column;align-items:flex-start;gap:6px;padding:12px}.dash-tiles .stat-icon{width:36px;height:36px;font-size:18px;border-radius:11px}.dash-tiles .stat b{font-size:22px}}

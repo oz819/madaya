@@ -23,8 +23,10 @@ export default function SlidingIndicator({ active }: { active: string }) {
       el.style.height = `${btn.offsetHeight}px`;
     };
     place();
+    // Buttons can move without the row resizing (a web font loading, a label wrapping).
     const ro = new ResizeObserver(place);
     ro.observe(row);
+    row.querySelectorAll(":scope > button").forEach((b) => ro.observe(b));
     return () => ro.disconnect();
   }, [active]);
 

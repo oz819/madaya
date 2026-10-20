@@ -1182,6 +1182,51 @@ export type Database = {
           },
         ]
       }
+      registration_requests: {
+        Row: {
+          age: number | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          guardian_name: string | null
+          guardian_phone: string
+          id: string
+          memorized: string | null
+          section: string
+          status: string
+          student_id: string | null
+          student_name: string
+        }
+        Insert: {
+          age?: number | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          guardian_name?: string | null
+          guardian_phone: string
+          id?: string
+          memorized?: string | null
+          section: string
+          status?: string
+          student_id?: string | null
+          student_name: string
+        }
+        Update: {
+          age?: number | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string
+          id?: string
+          memorized?: string | null
+          section?: string
+          status?: string
+          student_id?: string | null
+          student_name?: string
+        }
+        Relationships: []
+      }
       report_sends: {
         Row: {
           created_at: string
@@ -1468,6 +1513,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_accept_registration: {
+        Args: { p_circle_id: string; p_id: string }
+        Returns: string
+      }
       admin_purge: {
         Args: { p_id: string; p_kind: string }
         Returns: undefined
@@ -1502,10 +1551,23 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_reject_registration: { Args: { p_id: string }; Returns: undefined }
       rotate_guardian_link: { Args: { p_student_id: string }; Returns: string }
       save_talqeen_session: {
         Args: { p_entries: Json; p_session: Json }
         Returns: undefined
+      }
+      submit_registration: {
+        Args: {
+          p_age: number | null
+          p_guardian_name: string | null
+          p_guardian_phone: string
+          p_memorized: string | null
+          p_section: string
+          p_student_name: string
+          p_trap?: string | null
+        }
+        Returns: boolean
       }
       sync_latest_arabic_entries: {
         Args: never

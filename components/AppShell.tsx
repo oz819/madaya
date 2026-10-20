@@ -17,6 +17,7 @@ import Reports from "@/components/sections/Reports";
 import Ranking from "@/components/sections/Ranking";
 import Manage from "@/components/sections/Manage";
 import Trash from "@/components/sections/Trash";
+import Dashboard from "@/components/sections/Dashboard";
 import ConfirmDialogHost from "@/components/ConfirmDialog";
 import SyncBadge from "@/components/SyncBadge";
 import SlidingIndicator from "@/components/SlidingIndicator";
@@ -24,7 +25,7 @@ import InstallHint from "@/components/InstallHint";
 import FilterBar from "@/components/FilterBar";
 import Toast, { useToast } from "@/components/Toast";
 
-type Page = "students" | "talqeen" | "reports" | "ranking" | "manage" | "trash";
+type Page = "students" | "talqeen" | "reports" | "ranking" | "dashboard" | "manage" | "trash";
 
 const NAV: { id: Page; label: string }[] = [
   { id: "students", label: "👨‍🎓 الطلاب" },
@@ -223,6 +224,9 @@ export default function AppShell() {
         ))}
         {profile.role === "ADMIN" && (
           <>
+            <button className={page === "dashboard" ? "active" : ""} onClick={() => setPage("dashboard")}>
+              📈 اللوحة
+            </button>
             <button className={page === "manage" ? "active" : ""} onClick={() => setPage("manage")}>
               ⚙️ الإدارة
             </button>
@@ -236,12 +240,13 @@ export default function AppShell() {
       <main>
         <div className="no-print">
           <InstallHint />
-          {((page === "students" && !view.studentId) || page === "talqeen" || page === "reports" || page === "ranking") && <FilterBar />}
+          {((page === "students" && !view.studentId) || page === "talqeen" || page === "reports" || page === "ranking" || page === "dashboard") && <FilterBar />}
         </div>
         {page === "students" && <Students openId={view.studentId} onOpen={openStudent} onClose={closeStudent} />}
         {page === "talqeen" && <Talqeen />}
         {page === "reports" && <Reports />}
         {page === "ranking" && <Ranking />}
+        {page === "dashboard" && profile.role === "ADMIN" && <Dashboard openStudent={openStudent} openManage={() => setPage("manage")} />}
         {page === "manage" && profile.role === "ADMIN" && <Manage />}
         {page === "trash" && profile.role === "ADMIN" && <Trash />}
       </main>

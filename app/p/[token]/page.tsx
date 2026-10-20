@@ -1,16 +1,13 @@
 import type { Metadata } from "next";
-import Image from "next/image";
-import { Reem_Kufi } from "next/font/google";
 import { createClient } from "@/utils/supabase/server";
 import { Mushaf, entryRange, type QuranRange } from "@/lib/quran";
 import { ATTENDANCE_LABEL, TRACK_LABEL, type AttendanceStatus, type QuranTrack, type Surah } from "@/lib/types";
 import { juzProgress } from "@/lib/juz";
 import JuzGrid from "@/components/JuzGrid";
+import PublicShell from "@/components/PublicShell";
 
 // The family's page (رابط ولي الأمر): read-only, no login, opened by the student's private token.
 // Everything comes from guardian_view(), which returns this one student or nothing.
-
-const reemKufi = Reem_Kufi({ subsets: ["arabic"], variable: "--font-reem-kufi", display: "swap" });
 
 export const metadata: Metadata = {
   title: "متابعة الطالب — حلقات القرآن",
@@ -38,12 +35,12 @@ export default async function GuardianPage({ params }: PageProps<"/p/[token]">) 
 
   if (!v) {
     return (
-      <Shell>
+      <PublicShell>
         <div className="card center">
           <h2>الرابط غير صالح</h2>
           <p className="muted">ربما تغيّر الرابط أو انتهى. اطلبوا الرابط الجديد من محفّظ الحلقة.</p>
         </div>
-      </Shell>
+      </PublicShell>
     );
   }
 
@@ -71,7 +68,7 @@ export default async function GuardianPage({ params }: PageProps<"/p/[token]">) 
     .slice(0, 14);
 
   return (
-    <Shell>
+    <PublicShell>
       <div className="card guardian-head">
         <h2>{v.student.name}</h2>
         <span className="muted">{v.student.circle ?? ""}</span>
@@ -169,24 +166,7 @@ export default async function GuardianPage({ params }: PageProps<"/p/[token]">) 
           <p className="muted">لا توجد تسجيلات في آخر أسبوعين.</p>
         )}
       </div>
-    </Shell>
-  );
-}
-
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className={`app-bg ${reemKufi.variable}`}>
-      <main className="guardian">
-        <div className="guardian-brand">
-          <Image src="/images/logo.png" alt="" width={56} height={56} />
-          <div>
-            <h1>المركز الثقافي الدعوي في مضايا</h1>
-            <span className="muted">متابعة حلقات القرآن الكريم</span>
-          </div>
-        </div>
-        {children}
-      </main>
-    </div>
+    </PublicShell>
   );
 }
 

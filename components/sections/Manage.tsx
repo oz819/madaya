@@ -7,6 +7,7 @@ import { adminSoftDelete } from "@/lib/adminDelete";
 import { PROFILE_COLUMNS, store, useStore } from "@/lib/offline/store";
 import { SECTIONS, SECTION_LABEL, effectiveFilter, filterLabel, filterOptions } from "@/lib/filter";
 import CenterSettings from "@/components/CenterSettings";
+import Registrations from "@/components/Registrations";
 
 // Admin-only actions (spec §5.4). These need a connection: they write straight to Supabase
 // (RLS re-checks is_admin()) and then refresh the local copy.
@@ -17,6 +18,7 @@ export default function Manage() {
         صلاحيات المدير: إدارة المحفّظين والمدراء، إنشاء الحلقات وتسميتها وأرشفتها، أرشفة الطلاب، وإدارة كتب العربية. كل محفّظ مفعّل يرى جميع
         الطلاب ويضيف ويعدّل إدخالاتهم. هذه الإجراءات تحتاج اتصالًا بالإنترنت.
       </div>
+      <Registrations />
       <Teachers />
       <Halaqat />
       <ArabicBooks />
