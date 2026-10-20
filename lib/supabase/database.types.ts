@@ -77,6 +77,39 @@ export type Database = {
           },
         ]
       }
+      audit_log: {
+        Row: {
+          action: string
+          actor: string | null
+          at: string
+          changes: Json
+          id: number
+          row_key: string
+          student_id: string | null
+          table_name: string
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          at?: string
+          changes: Json
+          id?: number
+          row_key: string
+          student_id?: string | null
+          table_name: string
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          at?: string
+          changes?: Json
+          id?: number
+          row_key?: string
+          student_id?: string | null
+          table_name?: string
+        }
+        Relationships: []
+      }
       ranking_settings: {
         Row: {
           absence_message: string | null

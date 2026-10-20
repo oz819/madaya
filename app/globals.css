@@ -488,3 +488,12 @@ button.juz-cell{padding:0;cursor:pointer}
 .table-scroll{overflow-x:auto}
 .dash-table td,.dash-table th{white-space:nowrap}
 @media (max-width:520px){.dash-tiles{grid-template-columns:1fr 1fr;gap:8px}.dash-tiles .stat-tile{flex-direction:column;align-items:flex-start;gap:6px;padding:12px}.dash-tiles .stat-icon{width:36px;height:36px;font-size:18px;border-radius:11px}.dash-tiles .stat b{font-size:22px}}
+
+/* ---- Phase 10: Excel export + audit log ---- */
+.export-row,.audit-filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;align-items:end}
+.export-row label,.audit-filters label{display:flex;flex-direction:column;gap:4px;font-size:.9em}
+.audit-list{list-style:none;padding:0;margin:12px 0;display:flex;flex-direction:column;gap:8px}
+.audit-list>li{border:1px solid var(--line);border-radius:12px;padding:9px 11px;display:flex;flex-direction:column;gap:4px}
+.audit-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.audit-changes{margin:0;padding-inline-start:18px;font-size:.92em;line-height:1.7}
+.audit-changes li{overflow-wrap:anywhere}

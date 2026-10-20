@@ -18,6 +18,7 @@ import Ranking from "@/components/sections/Ranking";
 import Manage from "@/components/sections/Manage";
 import Trash from "@/components/sections/Trash";
 import Dashboard from "@/components/sections/Dashboard";
+import AuditLog from "@/components/sections/AuditLog";
 import ConfirmDialogHost from "@/components/ConfirmDialog";
 import SyncBadge from "@/components/SyncBadge";
 import SlidingIndicator from "@/components/SlidingIndicator";
@@ -25,7 +26,7 @@ import InstallHint from "@/components/InstallHint";
 import FilterBar from "@/components/FilterBar";
 import Toast, { useToast } from "@/components/Toast";
 
-type Page = "students" | "talqeen" | "reports" | "ranking" | "dashboard" | "manage" | "trash";
+type Page = "students" | "talqeen" | "reports" | "ranking" | "dashboard" | "manage" | "trash" | "audit";
 
 const NAV: { id: Page; label: string }[] = [
   { id: "students", label: "👨‍🎓 الطلاب" },
@@ -233,6 +234,9 @@ export default function AppShell() {
             <button className={page === "trash" ? "active" : ""} onClick={() => setPage("trash")}>
               🗑️ سجل المحذوفات
             </button>
+            <button className={page === "audit" ? "active" : ""} onClick={() => setPage("audit")}>
+              📜 سجل التعديلات
+            </button>
           </>
         )}
       </nav>
@@ -249,6 +253,7 @@ export default function AppShell() {
         {page === "dashboard" && profile.role === "ADMIN" && <Dashboard openStudent={openStudent} openManage={() => setPage("manage")} />}
         {page === "manage" && profile.role === "ADMIN" && <Manage />}
         {page === "trash" && profile.role === "ADMIN" && <Trash />}
+        {page === "audit" && profile.role === "ADMIN" && <AuditLog />}
       </main>
 
       <Toast text={toast} />
