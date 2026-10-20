@@ -1,0 +1,65 @@
+# النسخة الاحتياطية اليومية: every night at 03:00 (Damascus, UTC+3) a full dump of the app's data
+# (schemas public and private: tables, functions, data), encrypted with a passphrase, kept 30 days
+# as a workflow artifact. The repository is public, so the file is only ever stored encrypted.
+#
+# Needs two repository secrets (Settings → Secrets and variables → Actions); until both exist the
+# job only prints a notice:
+#   SUPABASE_DB_URL     Supabase → Connect → "Session pooler" connection string, with the password
+#   BACKUP_PASSPHRASE   any long passphrase; keep it safe, without it a backup can't be opened
+#
+# Restore: download the artifact, then
+#   gpg -d madaya-YYYY-MM-DD.dump.gpg > madaya.dump
+#   pg_restore --no-owner --no-privileges -d "<database url>" madaya.dump
+name: db-backup
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check secrets
+        id: check
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$DB_URL" ] || [ -z "$PASS" ]; then
+            echo "::notice::Backup skipped: add the SUPABASE_DB_URL and BACKUP_PASSPHRASE secrets to turn it on."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Dump and encrypt
+        if: steps.check.outputs.ready == 'true'
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          name="madaya-$(TZ=Asia/Damascus date +%F)"
+          echo "NAME=$name" >> "$GITHUB_ENV"
+          # pg_dump must match the server's major version (Postgres 17).
+          docker run --rm -e DB_URL postgres:17 \
+            sh -c 'pg_dump "$DB_URL" --format=custom --no-owner --no-privileges --schema=public --schema=private' > "$name.dump"
+          test -s "$name.dump"
+          ls -lh "$name.dump"
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$PASS" --symmetric --cipher-algo AES256 -o "$name.dump.gpg" "$name.dump"
+          rm "$name.dump"
+
+      - name: Keep for 30 days
+        if: steps.check.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.NAME }}
+          path: ${{ env.NAME }}.dump.gpg
+          retention-days: 30
+          if-no-files-found: error
