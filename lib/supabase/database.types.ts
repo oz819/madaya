@@ -84,6 +84,7 @@ export type Database = {
           course_start: string | null
           grades: Json
           id: number
+          pass_mark: number
           updated_at: string
           updated_by: string | null
           week_start: number
@@ -95,6 +96,7 @@ export type Database = {
           course_start?: string | null
           grades?: Json
           id?: number
+          pass_mark?: number
           updated_at?: string
           updated_by?: string | null
           week_start?: number
@@ -106,6 +108,7 @@ export type Database = {
           course_start?: string | null
           grades?: Json
           id?: number
+          pass_mark?: number
           updated_at?: string
           updated_by?: string | null
           week_start?: number
@@ -873,6 +876,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      exams: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          edited_at: string
+          exam_date: string
+          examiner: string | null
+          id: string
+          juz_no: number | null
+          kind: string
+          notes: string | null
+          passed: boolean
+          score: number
+          student_id: string
+          surah_no: number | null
+          teacher_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          edited_at?: string
+          exam_date: string
+          examiner?: string | null
+          id?: string
+          juz_no?: number | null
+          kind: string
+          notes?: string | null
+          passed: boolean
+          score: number
+          student_id: string
+          surah_no?: number | null
+          teacher_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          edited_at?: string
+          exam_date?: string
+          examiner?: string | null
+          id?: string
+          juz_no?: number | null
+          kind?: string
+          notes?: string | null
+          passed?: boolean
+          score?: number
+          student_id?: string
+          surah_no?: number | null
+          teacher_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       guardian_links: {
         Row: {

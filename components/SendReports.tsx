@@ -8,6 +8,7 @@ import { LOCAL_WINDOW_DAYS, store, useStore } from "@/lib/offline/store";
 import { computeRanking } from "@/lib/ranking";
 import { useRankingSettings } from "@/lib/rankingSettings";
 import { formatPhone, normalizePhone, waLink } from "@/lib/guardian";
+import { examLines } from "@/lib/exams";
 import { dailyMessage, dayLines, dayName, monthName, monthStats, monthlyMessage, type MonthStats } from "@/lib/familyMessages";
 import { addDays, localDateStr, todayStr, type SendKind, type Student } from "@/lib/types";
 
@@ -78,7 +79,7 @@ export default function SendReports({ onClose }: { onClose: () => void }) {
       (attBy.get(st.id) ?? []).filter((a) => inMonth(a.att_date))
     );
     const r = ranks.get(st.id);
-    const stats: MonthStats = { ...base, rank: r?.rank ?? null, rankOf: r?.of ?? 0, exams: [] };
+    const stats: MonthStats = { ...base, rank: r?.rank ?? null, rankOf: r?.of ?? 0, exams: examLines(s.all("exams"), st.id, monthFrom, monthTo, mushaf) };
     return monthlyMessage(st, month, stats, token, female(st));
   }
 

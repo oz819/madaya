@@ -18,6 +18,7 @@ import type {
   Circle,
   CircleLesson,
   EduNote,
+  Exam,
   GuardianLink,
   ReportSend,
   QuranEntry,
@@ -55,6 +56,7 @@ type TableRows = {
   activities: Activity;
   guardian_links: GuardianLink;
   report_sends: ReportSend;
+  exams: Exam;
 };
 export type TableName = keyof TableRows;
 
@@ -68,7 +70,8 @@ export type OutboxTable =
   | "edu_notes"
   | "circle_lessons"
   | "activities"
-  | "report_sends";
+  | "report_sends"
+  | "exams";
 
 const TABLE_NAMES: TableName[] = [
   "circles",
@@ -86,6 +89,7 @@ const TABLE_NAMES: TableName[] = [
   "activities",
   "guardian_links",
   "report_sends",
+  "exams",
 ];
 
 // Pulled incrementally by updated_at, in dependency order (parents before children).
@@ -103,6 +107,7 @@ const SYNC_TABLES = [
   "activities",
   "guardian_links",
   "report_sends",
+  "exams",
 ] as const;
 
 // Server-managed columns are never sent: triggers set them (spec §9).
@@ -328,7 +333,7 @@ class LocalStore {
     return this.memo(`lookup:${table}`, () => new Map(this.data[table]));
   }
 
-  byStudent<T extends "quran_entries" | "arabic_entries" | "edu_notes" | "attendance" | "student_arabic_enrollments">(
+  byStudent<T extends "quran_entries" | "arabic_entries" | "edu_notes" | "attendance" | "student_arabic_enrollments" | "exams">(
     table: T
   ): Map<string, TableRows[T][]> {
     return this.memo(`byStudent:${table}`, () => {
@@ -793,6 +798,9 @@ class LocalStore {
           q = q.is("deleted_at", null).gte("activity_date", since);
         } else if (table === "report_sends") {
           q = q.is("deleted_at", null).gte("send_date", since);
+        } else if (table === "exams") {
+          // Every exam, however old: certificates and «جاهز للاختبار» need the whole history.
+          q = q.is("deleted_at", null);
         }
         const tiebreak =
           table === "attendance" || table === "guardian_links" || table === "report_sends"

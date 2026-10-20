@@ -9,6 +9,8 @@ import ArabicSection from "@/components/card/ArabicSection";
 import TarbiyaSection from "@/components/card/TarbiyaSection";
 import GuardianBox from "@/components/card/GuardianBox";
 import MemorizationMap, { ReviewSuggestions } from "@/components/card/MemorizationMap";
+import ExamsSection from "@/components/card/ExamsSection";
+import { takeCardIntent } from "@/lib/cardIntent";
 import SlidingIndicator from "@/components/SlidingIndicator";
 import { store, useStore } from "@/lib/offline/store";
 import { byNewest, studentProgress } from "@/lib/progress";
@@ -16,7 +18,7 @@ import { normalizePhone } from "@/lib/guardian";
 import { entryRange, type QuranRange } from "@/lib/quran";
 import { ATTENDANCE_LABEL, QUALITIES, todayStr, type AttendanceStatus, type QuranEntry } from "@/lib/types";
 
-type Section = "HIFZ" | "TILAWA" | "MURAJAA" | "TALQEEN" | "ARABIC" | "TARBIYA" | "MAP";
+type Section = "HIFZ" | "TILAWA" | "MURAJAA" | "TALQEEN" | "ARABIC" | "TARBIYA" | "MAP" | "EXAMS";
 
 const SECTIONS: { id: Section; label: string }[] = [
   { id: "HIFZ", label: "الحفظ" },
@@ -26,6 +28,7 @@ const SECTIONS: { id: Section; label: string }[] = [
   { id: "ARABIC", label: "العربية" },
   { id: "TARBIYA", label: "التربية" },
   { id: "MAP", label: "🗺️ الخريطة" },
+  { id: "EXAMS", label: "📝 الاختبارات" },
 ];
 
 const STATUSES: AttendanceStatus[] = ["PRESENT", "LATE", "EXCUSED", "ABSENT"];
@@ -33,7 +36,9 @@ const STATUSES: AttendanceStatus[] = ["PRESENT", "LATE", "EXCUSED", "ABSENT"];
 export default function StudentCard({ studentId, onClose }: { studentId: string; onClose: () => void }) {
   const s = useStore();
   const { mushaf, profile, showToast } = useApp();
-  const [section, setSection] = useState<Section>("HIFZ");
+  // Opened from «جاهزون للاختبار»: straight to the exams tab on that juz'.
+  const [intent] = useState(() => takeCardIntent(studentId));
+  const [section, setSection] = useState<Section>(intent?.tab ?? "HIFZ");
   const [editing, setEditing] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   // A suggested review chosen from the map: opens the review form on that range.
@@ -169,6 +174,9 @@ export default function StudentCard({ studentId, onClose }: { studentId: string;
           />
         )}
         {section === "MAP" && <MemorizationMap studentId={studentId} entries={quran} onReview={review} />}
+        {section === "EXAMS" && (
+          <ExamsSection key={studentId} studentId={studentId} exams={s.byStudent("exams").get(studentId) ?? []} initialJuz={intent?.juz} />
+        )}
         {section === "TALQEEN" && <TalqeenList entries={quran.filter((e) => e.track === "TALQEEN")} />}
         {section === "ARABIC" && <ArabicSection key={studentId} studentId={studentId} enrollments={enrollments} entries={arabic} />}
         {section === "TARBIYA" && <TarbiyaSection key={studentId} studentId={studentId} notes={edu} />}

@@ -14,9 +14,9 @@
 // apart as «بيانات غير كافية» instead of ranked.
 
 import { entryRange, type Mushaf, type QuranRange } from "@/lib/quran";
-import { addDays, localDateStr, type Activity, type Attendance, type QuranEntry, type Student } from "@/lib/types";
+import { addDays, localDateStr, type Activity, type Attendance, type Exam, type QuranEntry, type Student } from "@/lib/types";
 
-export type ItemKey = "hifz" | "tilawa" | "attendance" | "tarbiya" | "activities";
+export type ItemKey = "hifz" | "tilawa" | "attendance" | "tarbiya" | "activities" | "exams";
 
 export const ITEMS: { key: ItemKey; label: string }[] = [
   { key: "hifz", label: "الحفظ" },
@@ -24,6 +24,7 @@ export const ITEMS: { key: ItemKey; label: string }[] = [
   { key: "attendance", label: "الحضور" },
   { key: "tarbiya", label: "التربية والسلوك" },
   { key: "activities", label: "الدورات والأنشطة" },
+  { key: "exams", label: "الاختبارات" },
 ];
 
 export type Weights = Record<ItemKey, number>;
@@ -39,15 +40,18 @@ export type RankingSettings = {
   absenceThreshold: number;
   /** The admin's wording of the message to the family; null for the default. */
   absenceMessage: string | null;
+  /** Score out of 100 needed to pass an exam. */
+  passMark: number;
 };
 
 export const DEFAULT_SETTINGS: RankingSettings = {
-  weights: { hifz: 40, tilawa: 20, attendance: 20, tarbiya: 10, activities: 10 },
+  weights: { hifz: 40, tilawa: 20, attendance: 20, tarbiya: 10, activities: 10, exams: 0 },
   grades: { ممتاز: 100, "جيد جدًا": 85, جيد: 70, تمكين: 60, إعادة: 40 },
   weekStart: 6,
   courseStart: null,
   absenceThreshold: 3,
   absenceMessage: null,
+  passMark: 70,
 };
 
 export const WEEK_DAYS = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
@@ -61,6 +65,8 @@ export type RankData = {
   attendance: Attendance[];
   tarbiya: TarbiyaGrade[];
   activities: Activity[];
+  /** Optional: older callers and servers without exams pass none. */
+  exams?: Pick<Exam, "student_id" | "exam_date" | "score" | "deleted_at">[];
 };
 
 export type StudentScore = {
@@ -108,6 +114,7 @@ export function computeRanking(
   const attendance = data.attendance.filter((a) => ids.has(a.student_id) && inPeriod(a.att_date) && !a.deleted_at);
   const tarbiya = data.tarbiya.filter((n) => ids.has(n.student_id) && inPeriod(n.record_date));
   const activities = data.activities.filter((a) => inPeriod(a.activity_date) && !a.deleted_at);
+  const exams = (data.exams ?? []).filter((x) => ids.has(x.student_id) && inPeriod(x.exam_date) && !x.deleted_at);
 
   const circleOf = new Map(students.map((s) => [s.id, s.circle_id]));
   const circleDays = new Map<string, Set<string>>();
@@ -129,6 +136,7 @@ export function computeRanking(
   const quranBy = byStudent(quran);
   const attBy = byStudent(attendance);
   const tarbiyaBy = byStudent(tarbiya);
+  const examsBy = byStudent(exams);
 
   const ayatOf = new Map<string, number>();
   for (const s of students) {
@@ -146,6 +154,7 @@ export function computeRanking(
     attendance: attendance.length > 0,
     tarbiya: tarbiya.some((n) => grade(n.quality) != null),
     activities: activities.length > 0,
+    exams: exams.length > 0,
   };
   const anyGraded = quran.some((e) => e.track !== "TALQEEN" && grade(e.quality) != null);
 
@@ -184,12 +193,15 @@ export function computeRanking(
     const went = theirs.filter((a) => a.student_ids.includes(s.id)).length;
     const activitiesScore = theirs.length ? (went / theirs.length) * 100 : null;
 
+    const examScore = avg((examsBy.get(s.id) ?? []).map((x) => Number(x.score)));
+
     const items: Record<ItemKey, number | null> = {
       hifz: has.hifz ? round1(hifz) : null,
       tilawa: has.tilawa ? round1(tilawa) : null,
       attendance: has.attendance && attendanceScore != null ? round1(attendanceScore) : null,
       tarbiya: has.tarbiya && tarbiyaScore != null ? round1(tarbiyaScore) : null,
       activities: has.activities && activitiesScore != null ? round1(activitiesScore) : null,
+      exams: has.exams && examScore != null ? round1(examScore) : null,
     };
 
     let wSum = 0;

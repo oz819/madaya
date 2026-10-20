@@ -38,7 +38,13 @@ export function useRankData(from: string, to: string, circleId: string | null) {
       setError("");
       setRemote({
         key,
-        data: { quran: r.quran ?? [], attendance: r.attendance ?? [], tarbiya: r.tarbiya ?? [], activities: r.activities ?? [] },
+        data: {
+          quran: r.quran ?? [],
+          attendance: r.attendance ?? [],
+          tarbiya: r.tarbiya ?? [],
+          activities: r.activities ?? [],
+          exams: r.exams ?? [],
+        },
       });
     })();
     return () => {
@@ -54,6 +60,7 @@ export function useRankData(from: string, to: string, circleId: string | null) {
     attendance: s.all("attendance").filter((a) => !a.deleted_at && inP(a.att_date)),
     tarbiya: s.all("edu_notes").filter((n) => !n.deleted_at && inP(n.record_date)),
     activities: s.all("activities").filter((a) => !a.deleted_at && inP(a.activity_date)),
+    exams: s.all("exams").filter((x) => !x.deleted_at && inP(x.exam_date)),
   };
   return { data: local, partial: needsServer, error };
 }

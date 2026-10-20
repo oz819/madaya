@@ -26,6 +26,8 @@ export type CircleLesson = Tables<"circle_lessons">;
 export type Activity = Tables<"activities">;
 export type GuardianLink = Tables<"guardian_links">;
 export type ReportSend = Tables<"report_sends">;
+export type Exam = Tables<"exams">;
+export type ExamKind = "JUZ" | "SURAH" | "MONTHLY";
 export type SendKind = "DAILY" | "MONTHLY" | "ABSENCE";
 
 export type QuranTrack = "HIFZ" | "TILAWA" | "MURAJAA" | "TALQEEN";

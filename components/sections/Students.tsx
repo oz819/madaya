@@ -7,6 +7,7 @@ import { useScope } from "@/components/FilterBar";
 import LessonCard from "@/components/LessonCard";
 import SendReports from "@/components/SendReports";
 import AbsenceAlerts from "@/components/AbsenceAlerts";
+import ReadyForExam from "@/components/ReadyForExam";
 import { matchesName } from "@/lib/arabic";
 import { normalizePhone } from "@/lib/guardian";
 import { usePersistentState } from "@/lib/usePersistentState";
@@ -431,6 +432,7 @@ function Insights({ students, open }: { students: Student[]; open: (id: string) 
   return (
     <div className="insights">
       <AbsenceAlerts students={students} open={open} />
+      <ReadyForExam students={students} open={open} />
       {stars.length > 0 && (
         <div className="card insight star-card">
           <h3>🏆 نجوم الحفظ هذا الشهر</h3>

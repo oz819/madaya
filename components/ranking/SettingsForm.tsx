@@ -21,6 +21,7 @@ export default function SettingsForm({ settings }: { settings: RankingSettings }
       const n = Number(v.grades[q]);
       if (!Number.isFinite(n) || n < 0 || n > 100) return setError(`قيمة «${q}» لازم تكون بين 0 و100`);
     }
+    if (!Number.isInteger(Number(v.passMark)) || v.passMark < 1 || v.passMark > 100) return setError("علامة النجاح لازم تكون بين 1 و100");
     const err = await rankingSettings.save(supabase, v);
     if (err) return setError(err);
     setError("");
@@ -48,6 +49,22 @@ export default function SettingsForm({ settings }: { settings: RankingSettings }
             />
           </div>
         ))}
+      </div>
+      <h4>الاختبارات</h4>
+      <div className="formgrid compact">
+        <div>
+          <label>علامة النجاح بالاختبار (من 100)</label>
+          <input
+            type="number"
+            min={1}
+            max={100}
+            inputMode="numeric"
+            disabled={!admin}
+            value={Number.isFinite(v.passMark) ? v.passMark : ""}
+            onChange={(e) => setDraft({ ...v, passMark: e.target.value === "" ? NaN : Number(e.target.value) })}
+            aria-label="علامة النجاح"
+          />
+        </div>
       </div>
       <h4>الأسبوع والدورة</h4>
       <div className="formgrid compact">

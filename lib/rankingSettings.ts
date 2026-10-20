@@ -25,6 +25,7 @@ function fromRow(r: Row): RankingSettings {
     courseStart: r.course_start,
     absenceThreshold: r.absence_threshold ?? DEFAULT_SETTINGS.absenceThreshold,
     absenceMessage: r.absence_message ?? null,
+    passMark: r.pass_mark ?? DEFAULT_SETTINGS.passMark,
   };
 }
 
@@ -90,6 +91,7 @@ class SettingsStore {
         course_start: next.courseStart,
         absence_threshold: next.absenceThreshold,
         absence_message: next.absenceMessage,
+        pass_mark: next.passMark,
       })
       .eq("id", 1)
       .select("*")
