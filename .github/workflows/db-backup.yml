@@ -35,6 +35,12 @@ jobs:
             echo "::notice::Backup skipped: add the SUPABASE_DB_URL and BACKUP_PASSPHRASE secrets to turn it on."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
+            # The URL is checked here so a malformed one never reaches pg_dump, whose errors quote
+            # parts of it (the password) into this public log. Nothing of the URL is printed.
+            if ! printf '%s' "$DB_URL" | grep -Eq '^postgres(ql)?://[^:/?#@]+:[^][/?#@]+@[^/?#@]+(:[0-9]+)?/[^/?#]+(\?[A-Za-z_]+=[^&#]*(&[A-Za-z_]+=[^&#]*)*)?$'; then
+              echo "::error::SUPABASE_DB_URL is malformed. Replace [YOUR-PASSWORD] with the password, and percent-encode any ? # @ / : [ ] in it (or reset the database password to letters and digits)."
+              exit 1
+            fi
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
 
